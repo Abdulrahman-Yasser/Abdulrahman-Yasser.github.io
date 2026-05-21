@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>GSoC 2026 · AI-enabled Backup Camera · AGL</title>
+  <meta name="description" content="Weekly progress blog for GSoC 2026 — AI-enabled Backup Camera project under the Linux Foundation's Automotive Grade Linux (AGL) organization." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg:        #0d0f10;
+      --surface:   #141618;
+      --surface2:  #1c1f21;
+      --border:    rgba(255,255,255,0.08);
+      --border2:   rgba(255,255,255,0.14);
+      --text:      #e8e6e0;
+      --muted:     #8a8780;
+      --hint:      #4a4845;
+      --green:     #3fcf8e;
+      --green-dim: rgba(63,207,142,0.12);
+      --amber:     #f5a623;
+      --amber-dim: rgba(245,166,35,0.12);
+      --blue:      #5b9cf6;
+      --blue-dim:  rgba(91,156,246,0.1);
+      --mono: 'IBM Plex Mono', monospace;
+      --sans: 'IBM Plex Sans', sans-serif;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--sans);
+      font-size: 15px;
+      line-height: 1.7;
+      min-height: 100vh;
+    }
+
+    /* ── layout ── */
+    .site { max-width: 860px; margin: 0 auto; padding: 3rem 1.5rem 4rem; }
+
+    /* ── top bar ── */
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 3rem;
+      padding-bottom: 1.25rem;
+      border-bottom: 0.5px solid var(--border);
+      flex-wrap: wrap;
+      gap: 0.75rem;
+    }
+    .topbar-brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-family: var(--mono);
+      font-size: 13px;
+      color: var(--muted);
+    }
+    .brand-dot {
+      width: 8px; height: 8px; border-radius: 50%;
+      background: var(--green);
+      box-shadow: 0 0 8px var(--green);
+      flex-shrink: 0;
+    }
+    .topbar-links { display: flex; gap: 1rem; }
+    .topbar-links a {
+      font-family: var(--mono);
+      font-size: 12px;
+      color: var(--muted);
+      text-decoration: none;
+      transition: color 0.15s;
+    }
+    .topbar-links a:hover { color: var(--text); }
+
+    /* ── hero ── */
+    .hero { margin-bottom: 3rem; }
+    .hero-eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-family: var(--mono);
+      font-size: 11px;
+      color: var(--green);
+      border: 0.5px solid rgba(63,207,142,0.3);
+      background: var(--green-dim);
+      border-radius: 4px;
+      padding: 4px 10px;
+      margin-bottom: 1rem;
+    }
+    h1 {
+      font-family: var(--sans);
+      font-size: clamp(24px, 5vw, 38px);
+      font-weight: 600;
+      color: var(--text);
+      line-height: 1.2;
+      margin-bottom: 0.75rem;
+    }
+    .hero-sub {
+      font-family: var(--mono);
+      font-size: 13px;
+      color: var(--muted);
+      margin-bottom: 1.5rem;
+    }
+    .hero-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1.25rem;
+      margin-bottom: 1.5rem;
+    }
+    .meta-pill {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-family: var(--mono);
+      font-size: 12px;
+      color: var(--muted);
+    }
+    .meta-pill svg { width: 14px; height: 14px; opacity: 0.6; flex-shrink: 0; }
+    .hero-links { display: flex; flex-wrap: wrap; gap: 10px; }
+    .hero-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-family: var(--mono);
+      font-size: 12px;
+      padding: 6px 14px;
+      border: 0.5px solid var(--border2);
+      border-radius: 6px;
+      color: var(--muted);
+      text-decoration: none;
+      background: var(--surface);
+      transition: border-color 0.15s, color 0.15s;
+    }
+    .hero-link:hover { border-color: var(--border2); color: var(--text); background: var(--surface2); }
+    .hero-link svg { width: 14px; height: 14px; }
+
+    /* ── section label ── */
+    .sec-label {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-family: var(--mono);
+      font-size: 11px;
+      color: var(--hint);
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      margin-bottom: 1.25rem;
+    }
+    .sec-label::after {
+      content: '';
+      flex: 1;
+      height: 0.5px;
+      background: var(--border);
+    }
+
+    /* ── bonding card ── */
+    .bonding-card {
+      background: var(--surface);
+      border: 0.5px solid var(--border2);
+      border-left: 3px solid var(--green);
+      border-radius: 10px;
+      padding: 1.5rem;
+      margin-bottom: 3rem;
+    }
+    .bonding-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      margin-bottom: 1.25rem;
+    }
+    .bonding-title {
+      font-family: var(--sans);
+      font-size: 16px;
+      font-weight: 500;
+      color: var(--text);
+    }
+    .tag {
+      font-family: var(--mono);
+      font-size: 11px;
+      padding: 3px 9px;
+      border-radius: 4px;
+    }
+    .tag-green { background: var(--green-dim); color: var(--green); border: 0.5px solid rgba(63,207,142,0.25); }
+    .tag-amber { background: var(--amber-dim); color: var(--amber); border: 0.5px solid rgba(245,166,35,0.25); }
+    .tag-blue  { background: var(--blue-dim);  color: var(--blue);  border: 0.5px solid rgba(91,156,246,0.25); }
+
+    .achievement-list { list-style: none; display: flex; flex-direction: column; gap: 10px; }
+    .achievement-list li {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      font-size: 14px;
+      color: var(--text);
+      line-height: 1.5;
+    }
+    .ach-icon {
+      width: 18px; height: 18px;
+      color: var(--green);
+      flex-shrink: 0;
+      margin-top: 2px;
+    }
+
+    /* ── weeks ── */
+    .weeks-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+      gap: 10px;
+      margin-bottom: 3rem;
+    }
+    .week-card {
+      background: var(--surface);
+      border: 0.5px solid var(--border);
+      border-radius: 10px;
+      padding: 1rem;
+      text-decoration: none;
+      display: block;
+      transition: border-color 0.15s, background 0.15s;
+      position: relative;
+      overflow: hidden;
+    }
+    .week-card:hover { background: var(--surface2); border-color: var(--border2); }
+    .week-card.done { border-left: 3px solid var(--green); }
+    .week-card.milestone { border-left: 3px solid var(--amber); opacity: 0.85; }
+    .week-card.upcoming { opacity: 0.5; cursor: default; pointer-events: none; }
+    .week-card.upcoming:hover { background: var(--surface); border-color: var(--border); }
+    .wk-num {
+      font-family: var(--mono);
+      font-size: 10px;
+      color: var(--hint);
+      margin-bottom: 4px;
+    }
+    .wk-title {
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text);
+      margin-bottom: 6px;
+      line-height: 1.4;
+    }
+    .wk-status {
+      font-family: var(--mono);
+      font-size: 10px;
+    }
+    .wk-status.done    { color: var(--green); }
+    .wk-status.milestone { color: var(--amber); }
+    .wk-status.upcoming { color: var(--hint); }
+
+    /* ── about strip ── */
+    .about-strip {
+      background: var(--surface);
+      border: 0.5px solid var(--border);
+      border-radius: 10px;
+      padding: 1.25rem 1.5rem;
+      display: flex;
+      align-items: flex-start;
+      gap: 1.25rem;
+      margin-bottom: 3rem;
+      flex-wrap: wrap;
+    }
+    .about-avatar {
+      width: 48px; height: 48px; border-radius: 50%;
+      background: var(--blue-dim);
+      border: 0.5px solid rgba(91,156,246,0.3);
+      display: flex; align-items: center; justify-content: center;
+      font-family: var(--mono);
+      font-size: 16px;
+      font-weight: 500;
+      color: var(--blue);
+      flex-shrink: 0;
+    }
+    .about-body { flex: 1; min-width: 200px; }
+    .about-name { font-size: 15px; font-weight: 500; color: var(--text); margin-bottom: 2px; }
+    .about-desc { font-size: 13px; color: var(--muted); line-height: 1.5; }
+    .about-links { display: flex; gap: 10px; margin-top: 10px; flex-wrap: wrap; }
+    .about-link {
+      display: inline-flex; align-items: center; gap: 5px;
+      font-family: var(--mono); font-size: 11px;
+      color: var(--muted); text-decoration: none;
+      transition: color 0.15s;
+    }
+    .about-link:hover { color: var(--text); }
+    .about-link svg { width: 13px; height: 13px; }
+
+    /* ── footer ── */
+    footer {
+      border-top: 0.5px solid var(--border);
+      padding-top: 1.5rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+    }
+    .footer-left { font-family: var(--mono); font-size: 12px; color: var(--hint); }
+    .footer-right { display: flex; gap: 14px; }
+    .footer-right a {
+      color: var(--hint);
+      text-decoration: none;
+      font-size: 12px;
+      font-family: var(--mono);
+      transition: color 0.15s;
+    }
+    .footer-right a:hover { color: var(--muted); }
+  </style>
+</head>
+<body>
+<div class="site">
+
+  <!-- top bar -->
+  <nav class="topbar">
+    <div class="topbar-brand">
+      <span class="brand-dot"></span>
+      gsoc-2026 / agl / backup-camera
+    </div>
+    <div class="topbar-links">
+      <a href="#weeks">Weeks</a>
+      <a href="#about">About</a>
+    </div>
+  </nav>
+
+  <!-- hero -->
+  <section class="hero">
+    <div class="hero-eyebrow">GSoC 2026 · Linux Foundation · AGL</div>
+    <h1>AI-enabled Backup Camera</h1>
+    <p class="hero-sub">
+      Fluorite framework · Raspberry Pi · QEMU · OpenGL ES · PipeWire
+    </p>
+    <div class="hero-meta">
+      <span class="meta-pill">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
+        Abdulrahman
+      </span>
+      <span class="meta-pill">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+        May – Nov 2026
+      </span>
+      <span class="meta-pill">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>
+        350 hours
+      </span>
+      <span class="meta-pill">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 4l16 16M4 20 20 4"/></svg>
+        jsmoeller@linuxfoundation.org
+      </span>
+    </div>
+    <div class="hero-links">
+      <a class="hero-link" href="https://github.com/Abdulrahman-Yasser" target="_blank">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12c0 4.42 2.87 8.17 6.84 9.49.5.09.66-.22.66-.48v-1.7C6.73 19.91 6.14 18 6.14 18c-.46-1.16-1.11-1.47-1.11-1.47-.91-.62.07-.61.07-.61 1 .07 1.53 1.03 1.53 1.03.9 1.52 2.34 1.08 2.91.83.09-.65.35-1.08.63-1.33-2.22-.25-4.56-1.11-4.56-4.94 0-1.09.39-1.98 1.03-2.68-.1-.25-.45-1.27.1-2.64 0 0 .84-.27 2.75 1.02A9.56 9.56 0 0 1 12 6.8c.85.004 1.71.115 2.51.337 1.91-1.29 2.75-1.02 2.75-1.02.55 1.37.2 2.39.1 2.64.64.7 1.03 1.59 1.03 2.68 0 3.84-2.34 4.69-4.57 4.93.36.31.68.92.68 1.85v2.74c0 .27.16.58.67.48A10.01 10.01 0 0 0 22 12c0-5.52-4.48-10-10-10z"/></svg>
+        GitHub
+      </a>
+      <a class="hero-link" href="https://summerofcode.withgoogle.com/" target="_blank">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+        GSoC page
+      </a>
+      <a class="hero-link" href="https://gerrit.automotivelinux.org/" target="_blank">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="18" cy="18" r="3"/><circle cx="6" cy="6" r="3"/><path d="M13 6h3a2 2 0 0 1 2 2v7"/><line x1="6" y1="9" x2="6" y2="21"/></svg>
+        AGL Gerrit
+      </a>
+      <a class="hero-link" href="https://www.automotivelinux.org/" target="_blank">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+        AGL
+      </a>
+    </div>
+  </section>
+
+  <!-- weeks -->
+  <p class="sec-label" id="weeks">Weekly progress</p>
+
+  <div class="weeks-grid" id="weeks-grid"></div>
+
+  <!-- about -->
+  <p class="sec-label" id="about">About</p>
+
+  <div class="about-strip">
+    <div class="about-avatar">AR</div>
+    <div class="about-body">
+      <p class="about-name">Abdulrahman</p>
+      <p class="about-desc">
+        Embedded software engineer at Cypod Solutions. Working daily with Zephyr RTOS on Nordic nRF52/nRF53 devices.
+        GSoC 2026 contributor to the Linux Foundation's Automotive Grade Linux (AGL) organization —
+        building an AI-enabled backup camera system on the Fluorite framework.
+      </p>
+      <div class="about-links">
+        <a class="about-link" href="https://github.com/Abdulrahman-Yasser" target="_blank">
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12c0 4.42 2.87 8.17 6.84 9.49.5.09.66-.22.66-.48v-1.7C6.73 19.91 6.14 18 6.14 18c-.46-1.16-1.11-1.47-1.11-1.47-.91-.62.07-.61.07-.61 1 .07 1.53 1.03 1.53 1.03.9 1.52 2.34 1.08 2.91.83.09-.65.35-1.08.63-1.33-2.22-.25-4.56-1.11-4.56-4.94 0-1.09.39-1.98 1.03-2.68-.1-.25-.45-1.27.1-2.64 0 0 .84-.27 2.75 1.02A9.56 9.56 0 0 1 12 6.8c.85.004 1.71.115 2.51.337 1.91-1.29 2.75-1.02 2.75-1.02.55 1.37.2 2.39.1 2.64.64.7 1.03 1.59 1.03 2.68 0 3.84-2.34 4.69-4.57 4.93.36.31.68.92.68 1.85v2.74c0 .27.16.58.67.48A10.01 10.01 0 0 0 22 12c0-5.52-4.48-10-10-10z"/></svg>
+          Abdulrahman-Yasser
+        </a>
+        <a class="about-link" href="mailto:jsmoeller@linuxfoundation.org">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+          mentor
+        </a>
+        <a class="about-link" href="https://www.automotivelinux.org/" target="_blank">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+          automotivelinux.org
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <!-- footer -->
+  <footer>
+    <span class="footer-left">© 2026 Abdulrahman · GSoC AGL</span>
+    <div class="footer-right">
+      <a href="https://github.com/Abdulrahman-Yasser" target="_blank">GitHub</a>
+      <a href="https://www.automotivelinux.org/" target="_blank">AGL</a>
+      <a href="https://summerofcode.withgoogle.com/" target="_blank">GSoC</a>
+    </div>
+  </footer>
+
+</div>
+
+<script>
+  const TOTAL_WEEKS = 14;
+
+  // Weeks you've published — add week numbers here as you go, e.g. [1, 2, 3]
+  const published = [];
+
+  // Milestone weeks (evaluation weeks)
+  const milestones = { 7: "Midterm evaluation", 14: "Final evaluation" };
+
+  const grid = document.getElementById("weeks-grid");
+
+  // Bonding period card — always first, always linked
+  const bondingCard = document.createElement("a");
+  bondingCard.className = "week-card done";
+  bondingCard.href = "bonding.html";
+  bondingCard.innerHTML = `
+    <p class="wk-num">Bonding period</p>
+    <p class="wk-title">Community bonding</p>
+    <p class="wk-status done">✓ published</p>
+  `;
+  grid.appendChild(bondingCard);
+
+  for (let w = 1; w <= TOTAL_WEEKS; w++) {
+    const isDone = published.includes(w);
+    const isMilestone = !!milestones[w];
+    const cls = isDone ? "done" : isMilestone ? "milestone" : "upcoming";
+
+    const card = document.createElement(isDone ? "a" : "div");
+    card.className = "week-card " + cls;
+    if (isDone) {
+      card.href = `week-${w}.html`;
+    }
+
+    const title = isMilestone ? milestones[w] : (isDone ? "Read post →" : "Coming soon");
+    const statusLabel = isDone ? "✓ published" : isMilestone ? "— evaluation" : "· upcoming";
+    const statusCls = isDone ? "done" : isMilestone ? "milestone" : "upcoming";
+
+    card.innerHTML = `
+      <p class="wk-num">Week ${w}</p>
+      <p class="wk-title">${title}</p>
+      <p class="wk-status ${statusCls}">${statusLabel}</p>
+    `;
+    grid.appendChild(card);
+  }
+</script>
+</body>
+</html>

@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Community Bonding · GSoC 2026 · AGL Backup Camera</title>
+  <meta name="description" content="Community bonding period summary — GSoC 2026 AI-enabled Backup Camera, AGL." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg:        #0d0f10;
+      --surface:   #141618;
+      --surface2:  #1c1f21;
+      --border:    rgba(255,255,255,0.08);
+      --border2:   rgba(255,255,255,0.14);
+      --text:      #e8e6e0;
+      --muted:     #8a8780;
+      --hint:      #4a4845;
+      --green:     #3fcf8e;
+      --green-dim: rgba(63,207,142,0.12);
+      --amber:     #f5a623;
+      --blue:      #5b9cf6;
+      --blue-dim:  rgba(91,156,246,0.1);
+      --mono: 'IBM Plex Mono', monospace;
+      --sans: 'IBM Plex Sans', sans-serif;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--sans);
+      font-size: 15px;
+      line-height: 1.75;
+      min-height: 100vh;
+    }
+    .site { max-width: 720px; margin: 0 auto; padding: 3rem 1.5rem 5rem; }
+
+    .topbar {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 3rem; padding-bottom: 1.25rem;
+      border-bottom: 0.5px solid var(--border);
+      flex-wrap: wrap; gap: 0.75rem;
+    }
+    .back-link {
+      display: inline-flex; align-items: center; gap: 6px;
+      font-family: var(--mono); font-size: 12px;
+      color: var(--muted); text-decoration: none; transition: color 0.15s;
+    }
+    .back-link:hover { color: var(--text); }
+    .back-link svg { width: 14px; height: 14px; }
+    .topbar-brand { font-family: var(--mono); font-size: 12px; color: var(--hint); }
+
+    .post-header { margin-bottom: 2.5rem; }
+    .post-eyebrow {
+      display: inline-flex; align-items: center; gap: 8px;
+      font-family: var(--mono); font-size: 11px; color: var(--green);
+      border: 0.5px solid rgba(63,207,142,0.3); background: var(--green-dim);
+      border-radius: 4px; padding: 4px 10px; margin-bottom: 1rem;
+    }
+    h1 {
+      font-family: var(--sans); font-size: clamp(22px, 4vw, 32px);
+      font-weight: 600; color: var(--text); line-height: 1.25; margin-bottom: 0.75rem;
+    }
+    .post-meta {
+      display: flex; flex-wrap: wrap; gap: 1.25rem;
+      font-family: var(--mono); font-size: 12px; color: var(--muted);
+    }
+
+    .sec-label {
+      display: flex; align-items: center; gap: 10px;
+      font-family: var(--mono); font-size: 11px; color: var(--hint);
+      letter-spacing: 0.1em; text-transform: uppercase; margin: 2rem 0 1rem;
+    }
+    .sec-label::after { content: ''; flex: 1; height: 0.5px; background: var(--border); }
+
+    .achievement-list { list-style: none; display: flex; flex-direction: column; gap: 10px; margin-bottom: 1.5rem; }
+    .achievement-list li {
+      display: flex; align-items: flex-start; gap: 10px;
+      font-size: 14px; color: var(--text); line-height: 1.55;
+    }
+    .ach-icon { width: 16px; height: 16px; color: var(--green); flex-shrink: 0; margin-top: 3px; }
+
+    .prose { font-size: 15px; color: var(--text); line-height: 1.8; }
+    .prose p { margin-bottom: 1.1rem; }
+    .prose h2 { font-family: var(--sans); font-size: 18px; font-weight: 500; color: var(--text); margin: 2rem 0 0.75rem; }
+    .prose code {
+      font-family: var(--mono); font-size: 13px;
+      background: var(--surface2); border: 0.5px solid var(--border2);
+      border-radius: 4px; padding: 2px 6px; color: var(--green);
+    }
+    .prose pre {
+      background: var(--surface); border: 0.5px solid var(--border2);
+      border-radius: 8px; padding: 1.25rem; overflow-x: auto;
+      font-family: var(--mono); font-size: 13px; color: var(--text);
+      margin: 1rem 0 1.5rem; line-height: 1.6;
+    }
+    .prose pre code { background: none; border: none; padding: 0; color: inherit; }
+    .prose a { color: var(--blue); text-decoration: none; }
+    .prose a:hover { text-decoration: underline; }
+    .prose ul { padding-left: 1.4rem; margin-bottom: 1rem; }
+    .prose li { margin-bottom: 0.35rem; }
+
+    .cards-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 1.5rem; }
+    @media (max-width: 540px) { .cards-row { grid-template-columns: 1fr; } }
+    .mini-card { background: var(--surface); border: 0.5px solid var(--border); border-radius: 10px; padding: 1rem; }
+    .mini-card-label { font-family: var(--mono); font-size: 10px; color: var(--hint); letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 8px; }
+    .mini-card-body { font-size: 13px; color: var(--text); line-height: 1.5; }
+
+    .next-week {
+      background: var(--surface); border: 0.5px solid var(--border);
+      border-left: 3px solid var(--amber); border-radius: 10px;
+      padding: 1rem 1.25rem; margin-top: 2rem;
+    }
+    .next-label { font-family: var(--mono); font-size: 11px; color: var(--amber); margin-bottom: 4px; }
+    .next-text { font-size: 14px; color: var(--text); }
+
+    .post-nav {
+      display: flex; justify-content: flex-end; align-items: center;
+      margin-top: 3rem; padding-top: 1.5rem;
+      border-top: 0.5px solid var(--border); flex-wrap: wrap; gap: 1rem;
+    }
+    .nav-link {
+      display: inline-flex; align-items: center; gap: 6px;
+      font-family: var(--mono); font-size: 12px;
+      color: var(--muted); text-decoration: none; transition: color 0.15s;
+    }
+    .nav-link:hover { color: var(--text); }
+    .nav-link svg { width: 14px; height: 14px; }
+
+    footer {
+      border-top: 0.5px solid var(--border); padding-top: 1.5rem; margin-top: 2rem;
+      display: flex; justify-content: space-between; align-items: center;
+      flex-wrap: wrap; gap: 0.75rem;
+    }
+    .footer-left { font-family: var(--mono); font-size: 12px; color: var(--hint); }
+    .footer-right { display: flex; gap: 14px; }
+    .footer-right a { color: var(--hint); text-decoration: none; font-size: 12px; font-family: var(--mono); transition: color 0.15s; }
+    .footer-right a:hover { color: var(--muted); }
+  </style>
+</head>
+<body>
+<div class="site">
+
+  <nav class="topbar">
+    <a class="back-link" href="index.html">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="15 18 9 12 15 6"/></svg>
+      Back to blog
+    </a>
+    <span class="topbar-brand">gsoc-2026 / agl / bonding</span>
+  </nav>
+
+  <header class="post-header">
+    <div class="post-eyebrow">Community bonding · GSoC 2026 · AGL</div>
+    <h1>Community Bonding Period</h1>
+    <div class="post-meta">
+      <span>Apr – May 2026</span>
+      <span>Abdulrahman</span>
+    </div>
+  </header>
+
+  <p class="sec-label">Achievements</p>
+
+  <ul class="achievement-list">
+    <li>
+      <svg class="ach-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="20 6 9 17 4 12"/></svg>
+      Set up AGL (Vimba 21.90.0) on both QEMU (qemux86-64) and Raspberry Pi — flashed images, verified boot, and configured networking on both targets
+    </li>
+    <li>
+      <svg class="ach-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="20 6 9 17 4 12"/></svg>
+      Verified camera pipeline on QEMU (v4l2 loopback) and on real Raspberry Pi hardware — confirmed raw frame capture end-to-end
+    </li>
+    <li>
+      <svg class="ach-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="20 6 9 17 4 12"/></svg>
+      Learned the Gerrit code-review workflow — change submission, patch sets, review labels, and the AGL contribution guidelines
+    </li>
+    <li>
+      <svg class="ach-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="20 6 9 17 4 12"/></svg>
+      Understood the project scope in depth — identified the deliverables and mapped them to the GSoC timeline
+    </li>
+    <li>
+      <svg class="ach-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="20 6 9 17 4 12"/></svg>
+      Structured the overall project architecture — defined milestones, component boundaries, and the Fluorite framework integration plan
+    </li>
+    <li>
+      <svg class="ach-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="20 6 9 17 4 12"/></svg>
+      Debugged camera wire routing through <code>qpwgraph</code> — traced PipeWire nodes and confirmed the camera stream path end-to-end
+    </li>
+    <li>
+      <svg class="ach-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="20 6 9 17 4 12"/></svg>
+      Set up this GSoC progress blog to document weekly work and share updates with the AGL community
+    </li>
+  </ul>
+
+  <p class="sec-label">Details</p>
+
+  <div class="prose">
+    <h2>Setting up AGL on QEMU and Raspberry Pi</h2>
+    <p>
+      The first task during bonding was getting AGL Vimba (21.90.0) running on both targets.
+      On QEMU (qemux86-64), this involved building the image with Yocto and booting it via <code>runqemu</code>.
+      On the Raspberry Pi, the image was flashed to an SD card and booted directly on hardware.
+      Both targets required networking configuration to allow SSH access for development.
+    </p>
+
+    <h2>Camera verification</h2>
+    <p>
+      With AGL running, the next step was confirming the camera pipeline worked on both targets.
+      On QEMU, a v4l2 loopback device was used to simulate a camera source.
+      On Raspberry Pi, a physical camera module was connected and tested.
+      <code>qpwgraph</code> was used to visualize and debug the PipeWire node graph,
+      tracing exactly how the camera stream flows through the system.
+    </p>
+
+    <h2>Project structure and deliverables</h2>
+    <p>
+      The bonding period was also used to deeply understand the project scope.
+      After reviewing the proposal and discussing with the mentor, the deliverables were identified
+      and mapped to the 14-week GSoC timeline. The Fluorite framework integration plan was laid out,
+      and component boundaries were defined to guide the implementation weeks ahead.
+    </p>
+
+    <h2>Gerrit and AGL contribution workflow</h2>
+    <p>
+      Understanding how to contribute to AGL via Gerrit was essential before writing any code.
+      This included learning how to submit changes, respond to review comments, manage patch sets,
+      and understand the +1/+2 label system used by AGL maintainers.
+    </p>
+  </div>
+
+  <p class="sec-label">Challenges &amp; learnings</p>
+
+  <div class="cards-row">
+    <div class="mini-card">
+      <p class="mini-card-label">Challenge</p>
+      <p class="mini-card-body">Getting camera streams to work correctly on both QEMU and real hardware required debugging the PipeWire node graph through qpwgraph to understand exactly where the stream was being lost.</p>
+    </div>
+    <div class="mini-card">
+      <p class="mini-card-label">Key learning</p>
+      <p class="mini-card-body">Setting up both QEMU and Raspberry Pi targets early gives a big advantage — it makes it easy to quickly verify whether issues are hardware-specific or general.</p>
+    </div>
+  </div>
+
+  <div class="next-week">
+    <p class="next-label">Next →</p>
+    <p class="next-text">Week 1 — coding period begins.</p>
+  </div>
+
+  <nav class="post-nav">
+    <a class="nav-link" href="week-1.html">
+      Week 1
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="9 18 15 12 9 6"/></svg>
+    </a>
+  </nav>
+
+  <footer>
+    <span class="footer-left">© 2026 Abdulrahman · GSoC AGL</span>
+    <div class="footer-right">
+      <a href="https://github.com/Abdulrahman-Yasser" target="_blank">GitHub</a>
+      <a href="https://www.automotivelinux.org/" target="_blank">AGL</a>
+      <a href="index.html">Blog</a>
+    </div>
+  </footer>
+
+</div>
+</body>
+</html>
