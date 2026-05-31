@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Week 1 · GSoC 2026 · AGL Backup Camera</title>
+  <meta name="description" content="Week 1 progress update — diagnosing and fixing 3 bugs to get the OV5647 camera working in AGL's Flutter IVI image." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg:        #0d0f10;
+      --surface:   #141618;
+      --surface2:  #1c1f21;
+      --border:    rgba(255,255,255,0.08);
+      --border2:   rgba(255,255,255,0.14);
+      --text:      #e8e6e0;
+      --muted:     #8a8780;
+      --hint:      #4a4845;
+      --green:     #3fcf8e;
+      --green-dim: rgba(63,207,142,0.12);
+      --amber:     #f5a623;
+      --blue:      #5b9cf6;
+      --blue-dim:  rgba(91,156,246,0.1);
+      --mono: 'IBM Plex Mono', monospace;
+      --sans: 'IBM Plex Sans', sans-serif;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--sans);
+      font-size: 15px;
+      line-height: 1.75;
+      min-height: 100vh;
+    }
+
+    .site { max-width: 720px; margin: 0 auto; padding: 3rem 1.5rem 5rem; }
+
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 3rem;
+      padding-bottom: 1.25rem;
+      border-bottom: 0.5px solid var(--border);
+      flex-wrap: wrap;
+      gap: 0.75rem;
+    }
+    .back-link {
+      display: inline-flex; align-items: center; gap: 6px;
+      font-family: var(--mono); font-size: 12px;
+      color: var(--muted); text-decoration: none;
+      transition: color 0.15s;
+    }
+    .back-link:hover { color: var(--text); }
+    .back-link svg { width: 14px; height: 14px; }
+    .topbar-brand {
+      font-family: var(--mono); font-size: 12px; color: var(--hint);
+    }
+
+    .post-header { margin-bottom: 2.5rem; }
+    .post-eyebrow {
+      display: inline-flex; align-items: center; gap: 8px;
+      font-family: var(--mono); font-size: 11px;
+      color: var(--green);
+      border: 0.5px solid rgba(63,207,142,0.3);
+      background: var(--green-dim);
+      border-radius: 4px; padding: 4px 10px; margin-bottom: 1rem;
+    }
+    h1 {
+      font-family: var(--sans); font-size: clamp(22px, 4vw, 32px);
+      font-weight: 600; color: var(--text); line-height: 1.25; margin-bottom: 0.75rem;
+    }
+    .post-meta {
+      display: flex; flex-wrap: wrap; gap: 1.25rem;
+      font-family: var(--mono); font-size: 12px; color: var(--muted);
+    }
+
+    .sec-label {
+      display: flex; align-items: center; gap: 10px;
+      font-family: var(--mono); font-size: 11px; color: var(--hint);
+      letter-spacing: 0.1em; text-transform: uppercase;
+      margin: 2rem 0 1rem;
+    }
+    .sec-label::after { content: ''; flex: 1; height: 0.5px; background: var(--border); }
+
+    .achievement-list { list-style: none; display: flex; flex-direction: column; gap: 10px; margin-bottom: 1.5rem; }
+    .achievement-list li {
+      display: flex; align-items: flex-start; gap: 10px;
+      font-size: 14px; color: var(--text); line-height: 1.55;
+    }
+    .ach-icon { width: 16px; height: 16px; color: var(--green); flex-shrink: 0; margin-top: 3px; }
+
+    .prose { font-size: 15px; color: var(--text); line-height: 1.8; }
+    .prose p { margin-bottom: 1.1rem; }
+    .prose h2 {
+      font-family: var(--sans); font-size: 18px; font-weight: 500;
+      color: var(--text); margin: 2rem 0 0.75rem;
+    }
+    .prose h3 {
+      font-family: var(--sans); font-size: 15px; font-weight: 500;
+      color: var(--muted); margin: 1.5rem 0 0.5rem;
+    }
+    .prose code {
+      font-family: var(--mono); font-size: 13px;
+      background: var(--surface2); border: 0.5px solid var(--border2);
+      border-radius: 4px; padding: 2px 6px; color: var(--green);
+    }
+    .prose pre {
+      background: var(--surface); border: 0.5px solid var(--border2);
+      border-radius: 8px; padding: 1.25rem; overflow-x: auto;
+      font-family: var(--mono); font-size: 13px; color: var(--text);
+      margin: 1rem 0 1.5rem; line-height: 1.6;
+    }
+    .prose pre code { background: none; border: none; padding: 0; color: inherit; font-size: inherit; }
+    .prose a { color: var(--blue); text-decoration: none; }
+    .prose a:hover { text-decoration: underline; }
+    .prose ul, .prose ol { padding-left: 1.4rem; margin-bottom: 1rem; }
+    .prose li { margin-bottom: 0.35rem; }
+    .prose blockquote {
+      border-left: 3px solid var(--border2); padding-left: 1rem;
+      color: var(--muted); font-style: italic; margin: 1rem 0;
+    }
+    .prose figure { margin: 1.25rem 0 1.5rem; }
+    .prose figure img { width: 100%; border-radius: 8px; border: 0.5px solid var(--border2); display: block; }
+    .prose figure figcaption { font-family: var(--mono); font-size: 11px; color: var(--muted); margin-top: 6px; text-align: center; }
+
+    .cards-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 1.5rem; }
+    @media (max-width: 540px) { .cards-row { grid-template-columns: 1fr; } }
+    .mini-card {
+      background: var(--surface); border: 0.5px solid var(--border);
+      border-radius: 10px; padding: 1rem;
+    }
+    .mini-card-label {
+      font-family: var(--mono); font-size: 10px; color: var(--hint);
+      letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 8px;
+    }
+    .mini-card-body { font-size: 13px; color: var(--text); line-height: 1.5; }
+
+    .next-week {
+      background: var(--surface); border: 0.5px solid var(--border);
+      border-left: 3px solid var(--amber); border-radius: 10px;
+      padding: 1rem 1.25rem; margin-top: 2rem;
+    }
+    .next-label { font-family: var(--mono); font-size: 11px; color: var(--amber); margin-bottom: 4px; }
+    .next-text { font-size: 14px; color: var(--text); }
+
+    .post-nav {
+      display: flex; justify-content: space-between; align-items: center;
+      margin-top: 3rem; padding-top: 1.5rem;
+      border-top: 0.5px solid var(--border);
+      flex-wrap: wrap; gap: 1rem;
+    }
+    .nav-link {
+      display: inline-flex; align-items: center; gap: 6px;
+      font-family: var(--mono); font-size: 12px;
+      color: var(--muted); text-decoration: none;
+      transition: color 0.15s;
+    }
+    .nav-link:hover { color: var(--text); }
+    .nav-link svg { width: 14px; height: 14px; }
+    .nav-spacer { flex: 1; }
+
+    footer {
+      border-top: 0.5px solid var(--border);
+      padding-top: 1.5rem; margin-top: 2rem;
+      display: flex; justify-content: space-between; align-items: center;
+      flex-wrap: wrap; gap: 0.75rem;
+    }
+    .footer-left { font-family: var(--mono); font-size: 12px; color: var(--hint); }
+    .footer-right { display: flex; gap: 14px; }
+    .footer-right a {
+      color: var(--hint); text-decoration: none;
+      font-size: 12px; font-family: var(--mono); transition: color 0.15s;
+    }
+    .footer-right a:hover { color: var(--muted); }
+  </style>
+</head>
+<body>
+<div class="site">
+
+  <nav class="topbar">
+    <a class="back-link" href="index.html">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="15 18 9 12 15 6"/></svg>
+      Back to blog
+    </a>
+    <span class="topbar-brand">gsoc-2026 / agl / week-1</span>
+  </nav>
+
+  <header class="post-header">
+    <div class="post-eyebrow">Week 1 · GSoC 2026 · AGL</div>
+    <h1>Week 1: Getting the Camera to Work</h1>
+    <div class="post-meta">
+      <span>May 26 – Jun 1, 2026</span>
+      <span>Abdulrahman</span>
+    </div>
+  </header>
+
+  <p class="sec-label">This week</p>
+
+  <ul class="achievement-list">
+    <li>
+      <svg class="ach-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="20 6 9 17 4 12"/></svg>
+      <span>Incorporated meta-raspberrypi <a href="https://github.com/agherzan/meta-raspberrypi/pull/1517" style="color:var(--green)">PR #1517</a> at commit <code>f9474af</code> (the scarthgap-compatible version of rpi camera support)</span>
+    </li>
+    <li>
+      <svg class="ach-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="20 6 9 17 4 12"/></svg>
+      <span>Fixed Bug 1: added <code>libcamera</code> to PipeWire <code>PACKAGECONFIG</code>, which installs <code>libspa-libcamera.so</code>, the SPA plugin that connects PipeWire to the ISP-processed camera stream</span>
+    </li>
+    <li>
+      <svg class="ach-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="20 6 9 17 4 12"/></svg>
+      <span>Fixed Bug 2: added <code>S = "${WORKDIR}/git"</code> and <code>PROVIDES += "libcamera"</code> to the rpi-libcamera recipe, resolving a silent SONAME mismatch that caused <code>do_rootfs</code> to fail</span>
+    </li>
+    <li>
+      <svg class="ach-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="20 6 9 17 4 12"/></svg>
+      <span>Fixed Bug 3: WirePlumber was defaulting to the raw unicam V4L2 node instead of the libcamera node, corrected and confirmed persistent across reboots</span>
+    </li>
+    <li>
+      <svg class="ach-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="20 6 9 17 4 12"/></svg>
+      <span>Added OV5647 <code>dtoverlay</code> and devicetree overlay to the boot config, camera now auto-detected at boot</span>
+    </li>
+    <li>
+      <svg class="ach-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="20 6 9 17 4 12"/></svg>
+      <span>Diagnosed and fixed red color tint by adding <code>videoconvert</code> to the <code>camera-gstreamer</code> GStreamer pipeline to fix color space conversion</span>
+    </li>
+  </ul>
+
+  <p class="sec-label">Details</p>
+
+  <div class="prose">
+
+    <h2>The Goal</h2>
+    <p>
+      The first coding week had one concrete target: get the live OV5647 (Raspberry Pi Camera V1) feed
+      showing inside the <code>camera-gstreamer</code> app in the <code>agl-ivi-demo-flutter</code> image.
+      This app is part of AGL's IVI Flutter demo. It uses a native GStreamer pipeline
+      (<code>pipewiresrc ! waylandsink</code>) launched by the Flutter homescreen to display the camera feed.
+      On paper, the PR existed. In practice, nothing worked.
+    </p>
+
+    <h2>PR #1517: What it is and what it was tested on</h2>
+    <p>
+      <a href="https://github.com/agherzan/meta-raspberrypi/pull/1517">Meta-raspberrypi PR #1517</a>
+      ("raspberrypi5 camera support") by Joel Winarske introduces the <code>rpi-libcamera</code> recipe
+      (tip-of-tree RPi libcamera fork), <code>rpicam-apps</code>, and sets
+      <code>PREFERRED_PROVIDER_libcamera = "rpi-libcamera"</code> plus
+      <code>PACKAGE_EXCLUDE:append = " libcamera"</code> to prevent conflicts with the generic libcamera.
+    </p>
+    <p>
+      The PR was tested by Joel on <strong>plain Poky</strong> (not AGL), on a <strong>Raspberry Pi 5</strong>
+      (not Pi 4), using <strong>Camera V2/V3 sensors</strong> (imx477, imx219, imx708), and verified only
+      with <code>rpicam-hello</code> and <code>rpicam-jpeg</code> CLI tools, not through PipeWire streaming
+      to any app. This meant the PR was a solid foundation but not a complete solution for the AGL + Pi 4 +
+      OV5647 + Flutter use case.
+    </p>
+    <p>
+      The submodule <code>bsp/meta-raspberrypi</code> is checked out at commit <code>f9474af</code>.
+      This is important: the original PR commit on Joel's fork is <code>319a7a9</code>, which has
+      <code>LAYERSERIES_COMPAT_raspberrypi = "whinlatter"</code>, which is incompatible with AGL's scarthgap base.
+      The commit <code>f9474af</code> is the same camera changes rebased onto the agherzan repo with
+      <code>LAYERSERIES_COMPAT_raspberrypi = "nanbield scarthgap"</code>, fully compatible with AGL.
+    </p>
+
+    <h2>Bug 1: PipeWire missing libcamera SPA plugin</h2>
+    <p>
+      PipeWire uses SPA (Simple Plugin API) plugins to interface with camera hardware.
+      There are two relevant ones:
+    </p>
+    <ul>
+      <li><code>libspa-v4l2.so</code>: talks directly to V4L2 kernel devices (e.g. <code>/dev/video0</code> unicam). Delivers raw Bayer 10-bit data, unusable for display without ISP processing.</li>
+      <li><code>libspa-libcamera.so</code>: talks through libcamera, which runs the BCM2835-ISP to produce processed YUV frames. This is what you need for an RPi camera.</li>
+    </ul>
+    <p>
+      The AGL PipeWire recipe (<code>meta-agl/meta-pipewire/recipes-multimedia/pipewire/pipewire_1.%.bbappend</code>)
+      had <code>gstreamer v4l2 wireplumber</code> in its <code>PACKAGECONFIG</code> but was missing
+      <code>libcamera</code>. Without it, <code>libspa-libcamera.so</code> is never compiled or installed.
+    </p>
+    <p>The fix: one word added to the last line of PACKAGECONFIG:</p>
+    <pre><code>PACKAGECONFIG:class-target = "\
+    ${@bb.utils.contains('DISTRO_FEATURES', 'bluez5', 'bluez', '', d)} \
+    ${@bb.utils.contains('DISTRO_FEATURES', 'alsa', 'alsa pipewire-alsa', '', d)} \
+    ${@bb.utils.contains('DISTRO_FEATURES', 'agl-devel', 'sndfile pw-cat readline', '', d)} \
+    ${@bb.utils.contains('DISTRO_FEATURES', 'systemd', 'systemd systemd-service', '', d)} \
+    gstreamer v4l2 wireplumber libcamera \
+"</code></pre>
+
+    <figure>
+      <img src="public/images/camera-not-working.jpeg" alt="Only having plugin of v4l2, libcamera is missing (rpi-camera backend)" />
+      <figcaption>Only having plugin of v4l2, libcamera is missing (rpi-camera backend)</figcaption>
+    </figure>
+    
+    <h2>Bug 2: Two missing lines in the PR recipe</h2>
+    <p>
+      The <code>rpi-libcamera</code> recipe introduced by the PR had two bugs that prevented it from
+      working in an AGL build.
+    </p>
+
+    <h3>Missing: <code>S = "${WORKDIR}/git"</code></h3>
+    <p>
+      The recipe fetches source via a <code>git://</code> SRC_URI. When BitBake fetches a git repo,
+      it unpacks it into <code>${WORKDIR}/git</code>. But <code>S</code> (the source directory variable)
+      defaults to <code>${WORKDIR}/${BPN}-${PV}</code>, which doesn't exist for git fetches.
+      Without this line, the build fails trying to find source files that aren't there.
+    </p>
+    <h3>Missing: <code>PROVIDES += "libcamera"</code></h3>
+    <p>
+      This was the more subtle bug. The PR already adds
+      <code>PREFERRED_PROVIDER_libcamera ?= "rpi-libcamera"</code> to <code>rpi-default-providers.inc</code>.
+      But <code>PREFERRED_PROVIDER</code> only has effect if the preferred recipe actually declares it
+      <em>provides</em> the virtual name. Without <code>PROVIDES += "libcamera"</code> in the
+      <code>rpi-libcamera</code> recipe, BitBake sees only the generic libcamera as satisfying
+      <code>DEPENDS += "libcamera"</code>, silently ignores the preference, and compiles PipeWire against
+      generic libcamera 0.4.0 (SONAME: <code>libcamera.so.0.4</code>).
+    </p>
+    <p>
+      At image assembly time, the generic libcamera package is excluded by
+      <code>PACKAGE_EXCLUDE:append = " libcamera"</code>, and only rpi-libcamera 0.5.2 is present
+      (SONAME: <code>libcamera.so.0.5</code>). The result is a <code>do_rootfs</code> DNF failure:
+    </p>
+    <pre><code>Error:
+ Problem: package packagegroup-pipewire-1.0-r0.noarch requires pipewire-spa-plugins-meta,
+          but none of the providers can be installed
+  - pipewire-spa-plugins-meta-1.0.9-r0.aarch64 requires pipewire-spa-plugins-libcamera,
+    but none of the providers can be installed
+  - pipewire-spa-plugins-libcamera-1.0.9-r0.aarch64 requires libcamera.so.0.4()(64bit),
+    but none of the providers can be installed
+  - libcamera-1:0.4.0-r0.aarch64 is filtered out by exclude filtering
+
+ERROR: Task (agl-ivi-demo-flutter.bb:do_rootfs) failed with exit code '1'</code></pre>
+    <p>
+      Running <code>bitbake -c cleanall pipewire</code> alone doesn't fix it; PipeWire recompiles
+      but still links against generic libcamera because the PROVIDES line is still missing.
+      The fix is: add <code>PROVIDES += "libcamera"</code>, <em>then</em> clean and rebuild PipeWire.
+    </p>
+    <pre><code># In rpi-libcamera_0.5.2+rpt20250903.bb, after SRCREV:
+S = "${WORKDIR}/git"
+
+PE = "1"
+PROVIDES += "libcamera"</code></pre>
+
+    <h2>Bug 3: WirePlumber defaulting to the wrong video source</h2>
+    <p>
+      With PipeWire and libcamera correctly built, the camera feed still failed.
+      The journalctl log showed why:
+    </p>
+    <pre><code>camera-gstreamer[762]: Using pipeline: pipewiresrc ! waylandsink
+pipewire[413]: spa.v4l2: '/dev/video0' VIDIOC_REQBUFS Invalid argument
+pipewire[413]: pw.port: state ready -> error (can't negotiate buffers on port)
+pipewire[413]: pw.link: allocating -> error (can't negotiate buffers on port)
+camera-gstreamer[762]: ERROR: stream error: can't negotiate buffers on port
+camera-gstreamer[762]: Using pipeline: filesrc location=.../still-image.jpg \
+    ! decodebin ! videoconvert ! imagefreeze ! waylandsink</code></pre>
+    <p>
+      The app tried <code>pipewiresrc ! waylandsink</code>, failed, then fell back to displaying a
+      static JPEG. The <code>wpctl status</code> output revealed the root cause:
+    </p>
+    <pre><code>Sources:
+     57. bcm2835-isp (V4L2)
+     65. unicam (V4L2)           ← was default (*) — raw Bayer
+ *   81. ov5647 [libcamera]</code></pre>
+    <p>
+      Node 81 shows the asterisk (*) as default in this listing, but after the image was first
+      flashed, node 65 (unicam) had higher priority and was selected by <code>pipewiresrc</code> without
+      a <code>target-object</code> property. Unicam produces raw 10-bit Bayer data, so GStreamer's
+      <code>waylandsink</code> cannot display it, hence the negotiation failure.
+    </p>
+    <p>
+      The temporary fix was <code>wpctl set-default &lt;ov5647_node_id&gt;</code>. After reflashing the
+      corrected image, WirePlumber auto-configured the persistent default, confirmed in
+      <code>wpctl status</code> Settings section:
+    </p>
+    <pre><code>Default Configured Devices:
+    2. Video/Source  libcamera_input._base_soc_i2c0mux_i2c_1_ov5647_36</code></pre>
+
+    <h2>Color fix: videoconvert in camera-gstreamer</h2>
+
+    <p>
+      With the pipeline working, the camera image appeared with a strong red tint.
+      <code>rpicam-jpeg --nopreview -o /tmp/test.jpg</code> produced correct colors, proving libcamera
+      and the ISP were fine. The problem was in the GStreamer pipeline.
+    </p>
+    <figure>
+      <img src="public/images/red-camera.jpeg" alt="wrong coloring with the camera" />
+      <figcaption>wrong coloring with the camera</figcaption>
+    </figure>
+    <p>
+      The <code>camera-gstreamer</code> app (in <code>meta-agl-demo</code>) builds a pipeline:
+    </p>
+    <pre><code>pipewiresrc ! waylandsink</code></pre>
+    <p>
+      No color space conversion element between <code>pipewiresrc</code> and <code>waylandsink</code>.
+      The format negotiated between them was being misinterpreted. Adding <code>videoconvert</code>
+      forces an explicit conversion step and resolves the color channels correctly:
+    </p>
+    <pre><code>pipewiresrc ! videoconvert ! waylandsink</code></pre>
+    <p>
+      The exact change in <code>app/main.cpp</code> (<a href="https://gerrit.automotivelinux.org/gerrit/apps/camera-gstreamer" style="color:var(--blue)">camera-gstreamer</a>, SRCREV <code>97faa830</code>, line 737):
+    </p>
+    <pre><code>-    snprintf(pipeline_str, sizeof(pipeline_str), "pipewiresrc ! waylandsink");
++    snprintf(pipeline_str, sizeof(pipeline_str), "pipewiresrc ! videoconvert ! video/x-raw,format=BGRx ! waylandsink");</code></pre>
+    <p>
+      This change was made directly in <code>app/main.cpp</code> of the camera-gstreamer source,
+      then rebuilt with <code>bitbake -c compile -f camera-gstreamer</code>.
+      A proper bbappend patch will be created in Week 2.
+    </p>
+    <figure>
+      <img src="public/images/good-camera.jpeg" alt="Fixing the color" />
+      <figcaption>Fixing the color</figcaption>
+    </figure>
+
+
+
+  </div>
+
+  <p class="sec-label">Challenges &amp; learnings</p>
+
+  <div class="cards-row">
+    <div class="mini-card">
+      <p class="mini-card-label">Challenge</p>
+      <p class="mini-card-body">PR #1517 was never tested with AGL, PipeWire streaming, or a V1 camera. All three bugs were silent with no obvious error messages pointing to the root cause. Each required understanding a different layer of the stack (Yocto PROVIDES, PipeWire SPA plugins, WirePlumber policy).</p>
+    </div>
+    <div class="mini-card">
+      <p class="mini-card-label">Key learning</p>
+      <p class="mini-card-body"><code>PROVIDES</code> in BitBake is what makes <code>PREFERRED_PROVIDER</code> actually work. Without it, the provider preference is silently ignored even when the setting is present; the dependency resolver only sees what each recipe explicitly declares it provides.</p>
+    </div>
+  </div>
+
+  <div class="next-week">
+    <p class="next-label">Next week →</p>
+    <p class="next-text">Create a proper bbappend patch for the <code>videoconvert</code> fix so it survives rebuilds. Bake the WirePlumber default source config into the image. Begin AI inference integration with YOLOv8/TFLite for the backup camera object detection.</p>
+  </div>
+
+  <nav class="post-nav">
+    <a class="nav-link" href="bonding.html">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="15 18 9 12 15 6"/></svg>
+      Community Bonding
+    </a>
+    <span class="nav-spacer"></span>
+  </nav>
+
+  <footer>
+    <span class="footer-left">© 2026 Abdulrahman · GSoC AGL</span>
+    <div class="footer-right">
+      <a href="https://github.com/Abdulrahman-Yasser" target="_blank">GitHub</a>
+      <a href="https://www.automotivelinux.org/" target="_blank">AGL</a>
+      <a href="index.html">Blog</a>
+    </div>
+  </footer>
+
+</div>
+</body>
+</html>

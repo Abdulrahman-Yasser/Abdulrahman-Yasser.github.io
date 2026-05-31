@@ -421,10 +421,15 @@
   const TOTAL_WEEKS = 14;
 
   // Weeks you've published — add week numbers here as you go, e.g. [1, 2, 3]
-  const published = [];
+  const published = [1];
 
   // Milestone weeks (evaluation weeks)
   const milestones = { 7: "Midterm evaluation", 14: "Final evaluation" };
+
+  // Post titles for published weeks
+  const titles = {
+    1: "Getting the Camera to Work",
+  };
 
   const grid = document.getElementById("weeks-grid");
 
@@ -450,7 +455,7 @@
       card.href = `week-${w}.html`;
     }
 
-    const title = isMilestone ? milestones[w] : (isDone ? "Read post →" : "Coming soon");
+    const title = isMilestone ? milestones[w] : (isDone ? (titles[w] || "Read post →") : "Coming soon");
     const statusLabel = isDone ? "✓ published" : isMilestone ? "— evaluation" : "· upcoming";
     const statusCls = isDone ? "done" : isMilestone ? "milestone" : "upcoming";
 
