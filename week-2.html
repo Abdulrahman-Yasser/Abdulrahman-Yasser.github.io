@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Week 2 · GSoC 2026 · AGL Backup Camera</title>
+  <meta name="description" content="Week 2 progress update: writing a standalone libcamera capture test to verify the DMA-BUF pipeline before building the GPU renderer." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg:        #0d0f10;
+      --surface:   #141618;
+      --surface2:  #1c1f21;
+      --border:    rgba(255,255,255,0.08);
+      --border2:   rgba(255,255,255,0.14);
+      --text:      #e8e6e0;
+      --muted:     #8a8780;
+      --hint:      #4a4845;
+      --green:     #3fcf8e;
+      --green-dim: rgba(63,207,142,0.12);
+      --amber:     #f5a623;
+      --blue:      #5b9cf6;
+      --blue-dim:  rgba(91,156,246,0.1);
+      --mono: 'IBM Plex Mono', monospace;
+      --sans: 'IBM Plex Sans', sans-serif;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--sans);
+      font-size: 15px;
+      line-height: 1.75;
+      min-height: 100vh;
+    }
+
+    .site { max-width: 720px; margin: 0 auto; padding: 3rem 1.5rem 5rem; }
+
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 3rem;
+      padding-bottom: 1.25rem;
+      border-bottom: 0.5px solid var(--border);
+      flex-wrap: wrap;
+      gap: 0.75rem;
+    }
+    .back-link {
+      display: inline-flex; align-items: center; gap: 6px;
+      font-family: var(--mono); font-size: 12px;
+      color: var(--muted); text-decoration: none;
+      transition: color 0.15s;
+    }
+    .back-link:hover { color: var(--text); }
+    .back-link svg { width: 14px; height: 14px; }
+    .topbar-brand {
+      font-family: var(--mono); font-size: 12px; color: var(--hint);
+    }
+
+    .post-header { margin-bottom: 2.5rem; }
+    .post-eyebrow {
+      display: inline-flex; align-items: center; gap: 8px;
+      font-family: var(--mono); font-size: 11px;
+      color: var(--green);
+      border: 0.5px solid rgba(63,207,142,0.3);
+      background: var(--green-dim);
+      border-radius: 4px; padding: 4px 10px; margin-bottom: 1rem;
+    }
+    h1 {
+      font-family: var(--sans); font-size: clamp(22px, 4vw, 32px);
+      font-weight: 600; color: var(--text); line-height: 1.25; margin-bottom: 0.75rem;
+    }
+    .post-meta {
+      display: flex; flex-wrap: wrap; gap: 1.25rem;
+      font-family: var(--mono); font-size: 12px; color: var(--muted);
+    }
+
+    .sec-label {
+      display: flex; align-items: center; gap: 10px;
+      font-family: var(--mono); font-size: 11px; color: var(--hint);
+      letter-spacing: 0.1em; text-transform: uppercase;
+      margin: 2rem 0 1rem;
+    }
+    .sec-label::after { content: ''; flex: 1; height: 0.5px; background: var(--border); }
+
+    .achievement-list { list-style: none; display: flex; flex-direction: column; gap: 10px; margin-bottom: 1.5rem; }
+    .achievement-list li {
+      display: flex; align-items: flex-start; gap: 10px;
+      font-size: 14px; color: var(--text); line-height: 1.55;
+    }
+    .ach-icon { width: 16px; height: 16px; color: var(--green); flex-shrink: 0; margin-top: 3px; }
+
+    .prose { font-size: 15px; color: var(--text); line-height: 1.8; }
+    .prose p { margin-bottom: 1.1rem; }
+    .prose h2 {
+      font-family: var(--sans); font-size: 18px; font-weight: 500;
+      color: var(--text); margin: 2rem 0 0.75rem;
+    }
+    .prose h3 {
+      font-family: var(--sans); font-size: 15px; font-weight: 500;
+      color: var(--muted); margin: 1.5rem 0 0.5rem;
+    }
+    .prose code {
+      font-family: var(--mono); font-size: 13px;
+      background: var(--surface2); border: 0.5px solid var(--border2);
+      border-radius: 4px; padding: 2px 6px; color: var(--green);
+    }
+    .prose pre {
+      background: var(--surface); border: 0.5px solid var(--border2);
+      border-radius: 8px; padding: 1.25rem; overflow-x: auto;
+      font-family: var(--mono); font-size: 13px; color: var(--text);
+      margin: 1rem 0 1.5rem; line-height: 1.6;
+    }
+    .prose pre code { background: none; border: none; padding: 0; color: inherit; font-size: inherit; }
+    .prose a { color: var(--blue); text-decoration: none; }
+    .prose a:hover { text-decoration: underline; }
+    .prose ul, .prose ol { padding-left: 1.4rem; margin-bottom: 1rem; }
+    .prose li { margin-bottom: 0.35rem; }
+    .prose blockquote {
+      border-left: 3px solid var(--border2); padding-left: 1rem;
+      color: var(--muted); font-style: italic; margin: 1rem 0;
+    }
+
+    .cards-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 1.5rem; }
+    @media (max-width: 540px) { .cards-row { grid-template-columns: 1fr; } }
+    .mini-card {
+      background: var(--surface); border: 0.5px solid var(--border);
+      border-radius: 10px; padding: 1rem;
+    }
+    .mini-card-label {
+      font-family: var(--mono); font-size: 10px; color: var(--hint);
+      letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 8px;
+    }
+    .mini-card-body { font-size: 13px; color: var(--text); line-height: 1.5; }
+
+    .plan-table {
+      width: 100%; border-collapse: collapse; margin: 1rem 0 1.5rem;
+      font-size: 13px;
+    }
+    .plan-table th {
+      font-family: var(--mono); font-size: 10px; color: var(--hint);
+      letter-spacing: 0.08em; text-transform: uppercase;
+      text-align: left; padding: 0 0.75rem 0.6rem;
+      border-bottom: 0.5px solid var(--border2);
+    }
+    .plan-table td {
+      padding: 0.55rem 0.75rem;
+      border-bottom: 0.5px solid var(--border);
+      color: var(--text); vertical-align: top; line-height: 1.5;
+    }
+    .plan-table tr:last-child td { border-bottom: none; }
+    .plan-table td:first-child {
+      font-family: var(--mono); font-size: 12px;
+      color: var(--muted); white-space: nowrap; width: 90px;
+    }
+    .plan-table td.done-cell { color: var(--green); }
+    .plan-table td.current-cell { color: var(--amber); font-weight: 500; }
+    .plan-table tr.current-row td { background: rgba(245,166,35,0.04); }
+
+    .next-week {
+      background: var(--surface); border: 0.5px solid var(--border);
+      border-left: 3px solid var(--amber); border-radius: 10px;
+      padding: 1rem 1.25rem; margin-top: 2rem;
+    }
+    .next-label { font-family: var(--mono); font-size: 11px; color: var(--amber); margin-bottom: 4px; }
+    .next-text { font-size: 14px; color: var(--text); }
+
+    .post-nav {
+      display: flex; justify-content: space-between; align-items: center;
+      margin-top: 3rem; padding-top: 1.5rem;
+      border-top: 0.5px solid var(--border);
+      flex-wrap: wrap; gap: 1rem;
+    }
+    .nav-link {
+      display: inline-flex; align-items: center; gap: 6px;
+      font-family: var(--mono); font-size: 12px;
+      color: var(--muted); text-decoration: none;
+      transition: color 0.15s;
+    }
+    .nav-link:hover { color: var(--text); }
+    .nav-link svg { width: 14px; height: 14px; }
+    .nav-spacer { flex: 1; }
+
+    footer {
+      border-top: 0.5px solid var(--border);
+      padding-top: 1.5rem; margin-top: 2rem;
+      display: flex; justify-content: space-between; align-items: center;
+      flex-wrap: wrap; gap: 0.75rem;
+    }
+    .footer-left { font-family: var(--mono); font-size: 12px; color: var(--hint); }
+    .footer-right { display: flex; gap: 14px; }
+    .footer-right a {
+      color: var(--hint); text-decoration: none;
+      font-size: 12px; font-family: var(--mono); transition: color 0.15s;
+    }
+    .footer-right a:hover { color: var(--muted); }
+  </style>
+</head>
+<body>
+<div class="site">
+
+  <nav class="topbar">
+    <a class="back-link" href="index.html">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="15 18 9 12 15 6"/></svg>
+      Back to blog
+    </a>
+    <span class="topbar-brand">gsoc-2026 / agl / week-2</span>
+  </nav>
+
+  <header class="post-header">
+    <div class="post-eyebrow">Week 2 · GSoC 2026 · AGL</div>
+    <h1>Week 2: Verifying the Camera DMA-BUF Pipeline</h1>
+    <div class="post-meta">
+      <span>Jun 2 – Jun 8, 2026</span>
+      <span>Abdulrahman</span>
+    </div>
+  </header>
+
+  <p class="sec-label">This week</p>
+
+  <ul class="achievement-list">
+    <li>
+      <svg class="ach-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="20 6 9 17 4 12"/></svg>
+      <span>Wrote a standalone C++ tool using the libcamera API to open the IMX219, configure NV12 at 1640×1232 (2×2-binned full-sensor mode), and capture a frame — confirming the camera hands back a real kernel DMA-BUF file descriptor</span>
+    </li>
+    <li>
+      <svg class="ach-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="20 6 9 17 4 12"/></svg>
+      <span>Cross-compiled the tool from the host using the Yocto toolchain already in <code>sysroots-components</code>, with no image rebuild or reflash needed — worked around broken toolchain symlinks left by <code>rm_work</code></span>
+    </li>
+    <li>
+      <svg class="ach-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="20 6 9 17 4 12"/></svg>
+      <span>Added a 30-frame AE/AWB warmup — the IMX219 first frame is black until the exposure feedback loop converges, so we skip 30 frames before saving</span>
+    </li>
+    <li>
+      <svg class="ach-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="20 6 9 17 4 12"/></svg>
+      <span>Fixed zoomed image: 1280×720 is a partial-readout sensor mode on the IMX219 that crops the sensor centre. Switching to <strong>1640×1232</strong> — the 2×2-binned full-sensor mode — reads the entire 3280×2464 array and gives the correct wide-angle field of view</span>
+    </li>
+    <li>
+      <svg class="ach-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="20 6 9 17 4 12"/></svg>
+      <span>Fixed corrupted raw output: the camera aligns rows to 64 bytes (stride 1664, not 1640), so writing the full buffer directly produces diagonal lines in ffplay. Fixed by stripping the padding when saving — writing only the valid <code>width</code> bytes per row</span>
+    </li>
+  </ul>
+
+  <p class="sec-label">Details</p>
+
+  <div class="prose">
+
+    <h2>Why a standalone test first</h2>
+    <p>
+      The full backup camera pipeline will be: camera / DMA-BUF / GPU texture / GLSL shader / Wayland surface / AI overlay.
+      Before writing any of the GPU or display code, I needed to answer one question:
+      does libcamera on this AGL image actually give me a kernel DMA-BUF fd I can later pass to EGL?
+    </p>
+    <p>
+      The answer turns out to be yes, but getting there took most of the week, mostly because of
+      the cross-compilation setup rather than anything in libcamera itself.
+    </p>
+
+    <h2>Cross-compilation without rebuilding the image</h2>
+    <p>
+      The AGL image doesn't have a C++ compiler installed, so native compilation on the RPi4
+      isn't an option without adding <code>tools-sdk</code> to the image features and reflashing
+      (which takes a couple of hours). Instead, I cross-compile on the host using the
+      <code>aarch64-agl-linux-g++</code> compiler that Yocto already built into
+      <code>raspberrypi4/tmp/sysroots-components/</code>.
+    </p>
+    <p>
+      The problem is that this build had <code>INHERIT += "rm_work"</code> set, which deletes
+      each recipe's work directory after building it. The compiler binary itself survives, but it
+      was compiled with hard-coded paths pointing into the now-deleted Yocto sandbox. All the
+      symlinks in the gcc <code>libexec/</code> directory are broken, including the bare <code>as</code>
+      the driver looks for when it needs to assemble.
+    </p>
+    <p>
+      The workaround I landed on: create a temporary directory with bare-named symlinks
+      (<code>as</code>, <code>ld</code>, etc.) pointing to the real cross-tools in
+      <code>binutils-cross-aarch64</code>, prepend it to <code>PATH</code>, and also
+      set <code>GCC_EXEC_PREFIX</code> and <code>COMPILER_PATH</code> so the driver
+      finds <code>cc1plus</code>. Then the whole thing works without touching the Yocto build.
+    </p>
+
+    <h2>The DMA-BUF fd</h2>
+    <p>
+      After getting the binary on the board and running it, the output looks like this:
+    </p>
+    <pre><code>[capture] camera: /base/soc/i2c0mux/i2c@1/imx219@10
+[capture] warming up AE/AWB (30 frames)...
+=== Frame captured (frame 31) ===
+  Width      : 1640
+  Height     : 1232
+  Stride     : 1664
+  PixelFormat: NV12
+  Planes     : 2
+  Plane[0]:  fd=15  offset=0  length=2049920
+  Plane[1]:  fd=15  offset=2049920  length=1024960
+[capture] raw frame saved to /tmp/frame.raw (1640x1232 NV12, stride=1664)</code></pre>
+    <p>
+      <code>fd=15</code> is the interesting part. You can confirm it's a real kernel DMA-BUF object
+      (not just a regular file or mmap region) by looking at what <code>/proc/&lt;pid&gt;/fd/15</code>
+      points to while the program is paused. It shows <code>/dmabuf:</code>, which is the kernel's
+      way of tagging a DMA-BUF handle in the fd table. That fd is what gets passed to EGL in the
+      next stage to create a GPU texture without any pixel copying.
+    </p>
+    <p>
+      The raw frame saves correctly. Copying it off the board and playing it back with ffplay
+      confirms it's a real wide-angle image:
+    </p>
+    <pre><code>scp root@&lt;rpi-ip&gt;:/tmp/frame.raw .
+ffplay -f rawvideo -pixel_format nv12 -video_size 1640x1232 frame.raw</code></pre>
+
+    <h2>The Sony IMX219 sensor</h2>
+    <p>
+      The camera module uses the Sony IMX219, an 8-megapixel sensor (8.08 MP) with a maximum
+      resolution of 3280×2464 pixels. It's the same sensor inside the official Raspberry Pi
+      Camera Module V2 and many Jetson Nano boards.
+    </p>
+    <p>
+      The IMX219 isn't a single-mode sensor. It has several native hardware readout modes, each
+      with a different crop, binning level, and maximum framerate:
+    </p>
+    <table class="plan-table">
+      <thead>
+        <tr>
+          <th>Mode</th>
+          <th>Resolution</th>
+          <th>FOV</th>
+          <th>~FPS</th>
+          <th>Notes</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Full res</td>
+          <td>3280 × 2464</td>
+          <td>Full</td>
+          <td>~15</td>
+          <td>All pixels read, no binning</td>
+        </tr>
+        <tr>
+          <td>2×2 binned</td>
+          <td>1640 × 1232</td>
+          <td>Full</td>
+          <td>~40</td>
+          <td>Entire array, 4 pixels to 1 output pixel - used here</td>
+        </tr>
+        <tr>
+          <td>Partial crop</td>
+          <td>1920 × 1080</td>
+          <td>Cropped</td>
+          <td>~30</td>
+          <td>Reads centre of array only</td>
+        </tr>
+        <tr>
+          <td>Partial crop</td>
+          <td>1280 × 720</td>
+          <td>Cropped</td>
+          <td>~60</td>
+          <td>Centre crop, zoomed appearance</td>
+        </tr>
+      </tbody>
+    </table>
+    <p>
+      The first time I ran the tool at 1280x720, the image was noticeably zoomed in. Objects
+      appeared larger than they should and the edges of the room were cut off. The lens wasn't
+      zoomed; the sensor mode was. libcamera selects sensor modes based on the requested output
+      size. At 1280x720 it picks the dedicated 60fps mode that physically reads only the centre
+      portion of the array at full pixel density, a hardware crop, not a downscale.
+    </p>
+    <p>
+      The fix is to request a size that makes libcamera choose a full-readout mode. 1640×1232
+      selects the 2×2-binned mode: the sensor reads the entire 3280×2464 array and combines
+      every 2×2 block of pixels into one output pixel. Result: correct wide-angle field of view
+      at ~40fps, more than enough for a backup camera.
+    </p>
+
+    <h2>Stride and the corrupted raw file</h2>
+    <p>
+      After switching to 1640x1232, the saved raw file showed only diagonal lines in ffplay,
+      a classic sign of a stride mismatch. Camera drivers align each row to a memory boundary
+      for DMA efficiency. For NV12 at width 1640, the driver pads each row to 1664 bytes (the
+      next multiple of 64). That's 24 bytes of padding at the end of every row.
+    </p>
+    <p>
+      The original code wrote <code>plane.length</code> bytes as a contiguous block, padding
+      included. ffplay reads a packed NV12 file and assumes no padding, so each row it reads
+      starts 24 bytes into the next row's data, and the whole image shifts diagonally. The fix
+      is to loop over rows and write only the valid <code>width</code> bytes per row, stepping
+      by <code>stride</code> bytes to skip the padding:
+    </p>
+    <pre><code>for (unsigned int row = 0; row &lt; rows; ++row)
+    out.write(src + row * stride, width);  // stride=1664, width=1640</code></pre>
+
+  </div>
+
+  <p class="sec-label">Challenges &amp; learnings</p>
+
+  <div class="cards-row">
+    <div class="mini-card">
+      <p class="mini-card-label">Challenge</p>
+      <p class="mini-card-body">The Yocto cross-toolchain had all its internal symlinks broken by <code>rm_work</code>. There's no obvious error, the compiler just silently calls the host x86 assembler and produces the wrong binary. Required reading through gcc's subprogram search logic to understand why and find the fix.</p>
+    </div>
+    <div class="mini-card">
+      <p class="mini-card-label">Key learning</p>
+      <p class="mini-card-body">Camera sensor modes are hardware-level choices, not software crops. The IMX219's 1280x720 mode physically reads fewer pixels from the sensor centre, you can't override that with a software control. To get the full field of view, request a size that maps to a full-readout mode (1640x1232 = 2x2 binned full array). Also: stride != width - always strip row padding when writing packed raw files.</p>
+    </div>
+  </div>
+
+  <div class="next-week">
+    <p class="next-label">Next week →</p>
+    <p class="next-text">Reading EGL and GBM documentation, specifically how <code>eglGetPlatformDisplayEXT</code> works with a GBM device, how to create a surfaceless context for headless rendering, and how <code>eglCreateImageKHR</code> with <code>EGL_LINUX_DMA_BUF_EXT</code> imports a DMA-BUF fd as a GPU texture. This is the foundation for Stage 2 of the pipeline.</p>
+  </div>
+
+  <nav class="post-nav">
+    <a class="nav-link" href="week-1.html">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="15 18 9 12 15 6"/></svg>
+      Week 1
+    </a>
+    <span class="nav-spacer"></span>
+  </nav>
+
+  <footer>
+    <span class="footer-left">© 2026 Abdulrahman · GSoC AGL</span>
+    <div class="footer-right">
+      <a href="https://github.com/Abdulrahman-Yasser" target="_blank">GitHub</a>
+      <a href="https://www.automotivelinux.org/" target="_blank">AGL</a>
+      <a href="index.html">Blog</a>
+    </div>
+  </footer>
+
+</div>
+</body>
+</html>
