@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Week 3 · GSoC 2026 · AGL Backup Camera</title>
+  <meta name="description" content="Week 3 progress update — setting up a headless EGL context via GBM, importing the camera DMA-BUF into the GPU, and running a first GLSL shader with a parking guide overlay." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg:        #0d0f10;
+      --surface:   #141618;
+      --surface2:  #1c1f21;
+      --border:    rgba(255,255,255,0.08);
+      --border2:   rgba(255,255,255,0.14);
+      --text:      #e8e6e0;
+      --muted:     #8a8780;
+      --hint:      #4a4845;
+      --green:     #3fcf8e;
+      --green-dim: rgba(63,207,142,0.12);
+      --amber:     #f5a623;
+      --blue:      #5b9cf6;
+      --blue-dim:  rgba(91,156,246,0.1);
+      --mono: 'IBM Plex Mono', monospace;
+      --sans: 'IBM Plex Sans', sans-serif;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--sans);
+      font-size: 15px;
+      line-height: 1.75;
+      min-height: 100vh;
+    }
+
+    .site { max-width: 720px; margin: 0 auto; padding: 3rem 1.5rem 5rem; }
+
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 3rem;
+      padding-bottom: 1.25rem;
+      border-bottom: 0.5px solid var(--border);
+      flex-wrap: wrap;
+      gap: 0.75rem;
+    }
+    .back-link {
+      display: inline-flex; align-items: center; gap: 6px;
+      font-family: var(--mono); font-size: 12px;
+      color: var(--muted); text-decoration: none;
+      transition: color 0.15s;
+    }
+    .back-link:hover { color: var(--text); }
+    .back-link svg { width: 14px; height: 14px; }
+    .topbar-brand {
+      font-family: var(--mono); font-size: 12px; color: var(--hint);
+    }
+
+    .post-header { margin-bottom: 2.5rem; }
+    .post-eyebrow {
+      display: inline-flex; align-items: center; gap: 8px;
+      font-family: var(--mono); font-size: 11px;
+      color: var(--green);
+      border: 0.5px solid rgba(63,207,142,0.3);
+      background: var(--green-dim);
+      border-radius: 4px; padding: 4px 10px; margin-bottom: 1rem;
+    }
+    h1 {
+      font-family: var(--sans); font-size: clamp(22px, 4vw, 32px);
+      font-weight: 600; color: var(--text); line-height: 1.25; margin-bottom: 0.75rem;
+    }
+    .post-meta {
+      display: flex; flex-wrap: wrap; gap: 1.25rem;
+      font-family: var(--mono); font-size: 12px; color: var(--muted);
+    }
+
+    .sec-label {
+      display: flex; align-items: center; gap: 10px;
+      font-family: var(--mono); font-size: 11px; color: var(--hint);
+      letter-spacing: 0.1em; text-transform: uppercase;
+      margin: 2rem 0 1rem;
+    }
+    .sec-label::after { content: ''; flex: 1; height: 0.5px; background: var(--border); }
+
+    .achievement-list { list-style: none; display: flex; flex-direction: column; gap: 10px; margin-bottom: 1.5rem; }
+    .achievement-list li {
+      display: flex; align-items: flex-start; gap: 10px;
+      font-size: 14px; color: var(--text); line-height: 1.55;
+    }
+    .ach-icon { width: 16px; height: 16px; color: var(--green); flex-shrink: 0; margin-top: 3px; }
+
+    .prose { font-size: 15px; color: var(--text); line-height: 1.8; }
+    .prose p { margin-bottom: 1.1rem; }
+    .prose h2 {
+      font-family: var(--sans); font-size: 18px; font-weight: 500;
+      color: var(--text); margin: 2rem 0 0.75rem;
+    }
+    .prose h3 {
+      font-family: var(--sans); font-size: 15px; font-weight: 500;
+      color: var(--muted); margin: 1.5rem 0 0.5rem;
+    }
+    .prose code {
+      font-family: var(--mono); font-size: 13px;
+      background: var(--surface2); border: 0.5px solid var(--border2);
+      border-radius: 4px; padding: 2px 6px; color: var(--green);
+    }
+    .prose pre {
+      background: var(--surface); border: 0.5px solid var(--border2);
+      border-radius: 8px; padding: 1.25rem; overflow-x: auto;
+      font-family: var(--mono); font-size: 13px; color: var(--text);
+      margin: 1rem 0 1.5rem; line-height: 1.6;
+    }
+    .prose pre code { background: none; border: none; padding: 0; color: inherit; font-size: inherit; }
+    .prose a { color: var(--blue); text-decoration: none; }
+    .prose a:hover { text-decoration: underline; }
+    .prose ul, .prose ol { padding-left: 1.4rem; margin-bottom: 1rem; }
+    .prose li { margin-bottom: 0.35rem; }
+    .prose blockquote {
+      border-left: 3px solid var(--border2); padding-left: 1rem;
+      color: var(--muted); font-style: italic; margin: 1rem 0;
+    }
+
+    .cards-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 1.5rem; }
+    @media (max-width: 540px) { .cards-row { grid-template-columns: 1fr; } }
+    .mini-card {
+      background: var(--surface); border: 0.5px solid var(--border);
+      border-radius: 10px; padding: 1rem;
+    }
+    .mini-card-label {
+      font-family: var(--mono); font-size: 10px; color: var(--hint);
+      letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 8px;
+    }
+    .mini-card-body { font-size: 13px; color: var(--text); line-height: 1.5; }
+
+    .plan-table {
+      width: 100%; border-collapse: collapse; margin: 1rem 0 1.5rem;
+      font-size: 13px;
+    }
+    .plan-table th {
+      font-family: var(--mono); font-size: 10px; color: var(--hint);
+      letter-spacing: 0.08em; text-transform: uppercase;
+      text-align: left; padding: 0 0.75rem 0.6rem;
+      border-bottom: 0.5px solid var(--border2);
+    }
+    .plan-table td {
+      padding: 0.55rem 0.75rem;
+      border-bottom: 0.5px solid var(--border);
+      color: var(--text); vertical-align: top; line-height: 1.5;
+    }
+    .plan-table tr:last-child td { border-bottom: none; }
+    .plan-table td:first-child {
+      font-family: var(--mono); font-size: 12px;
+      color: var(--muted); white-space: nowrap; width: 90px;
+    }
+    .plan-table td.done-cell { color: var(--green); }
+    .plan-table td.current-cell { color: var(--amber); font-weight: 500; }
+    .plan-table tr.current-row td { background: rgba(245,166,35,0.04); }
+
+    .next-week {
+      background: var(--surface); border: 0.5px solid var(--border);
+      border-left: 3px solid var(--amber); border-radius: 10px;
+      padding: 1rem 1.25rem; margin-top: 2rem;
+    }
+    .next-label { font-family: var(--mono); font-size: 11px; color: var(--amber); margin-bottom: 4px; }
+    .next-text { font-size: 14px; color: var(--text); }
+
+    .post-nav {
+      display: flex; justify-content: space-between; align-items: center;
+      margin-top: 3rem; padding-top: 1.5rem;
+      border-top: 0.5px solid var(--border);
+      flex-wrap: wrap; gap: 1rem;
+    }
+    .nav-link {
+      display: inline-flex; align-items: center; gap: 6px;
+      font-family: var(--mono); font-size: 12px;
+      color: var(--muted); text-decoration: none;
+      transition: color 0.15s;
+    }
+    .nav-link:hover { color: var(--text); }
+    .nav-link svg { width: 14px; height: 14px; }
+    .nav-spacer { flex: 1; }
+
+    footer {
+      border-top: 0.5px solid var(--border);
+      padding-top: 1.5rem; margin-top: 2rem;
+      display: flex; justify-content: space-between; align-items: center;
+      flex-wrap: wrap; gap: 0.75rem;
+    }
+    .footer-left { font-family: var(--mono); font-size: 12px; color: var(--hint); }
+    .footer-right { display: flex; gap: 14px; }
+    .footer-right a {
+      color: var(--hint); text-decoration: none;
+      font-size: 12px; font-family: var(--mono); transition: color 0.15s;
+    }
+    .footer-right a:hover { color: var(--muted); }
+  </style>
+</head>
+<body>
+<div class="site">
+
+  <nav class="topbar">
+    <a class="back-link" href="index.html">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="15 18 9 12 15 6"/></svg>
+      Back to blog
+    </a>
+    <span class="topbar-brand">gsoc-2026 / agl / week-3</span>
+  </nav>
+
+  <header class="post-header">
+    <div class="post-eyebrow">Week 3 · GSoC 2026 · AGL</div>
+    <h1>Week 3: DMA-BUF into the GPU, First Shader, Parking Grid</h1>
+    <div class="post-meta">
+      <span>Jun 9 – Jun 15, 2026</span>
+      <span>Abdulrahman</span>
+      <a href="https://github.com/Abdulrahman-Yasser/libcamera-dmabuf-capture" target="_blank" style="color:var(--blue);text-decoration:none;font-family:var(--mono);font-size:12px;">github: libcamera-dmabuf-capture</a>
+    </div>
+  </header>
+
+  <p class="sec-label">This week</p>
+
+  <ul class="achievement-list">
+    <li>
+      <svg class="ach-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="20 6 9 17 4 12"/></svg>
+      <span>Set up a headless EGL context via GBM + DRM render node — no display server, no X11, no Wayland compositor needed to drive the GPU</span>
+    </li>
+    <li>
+      <svg class="ach-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="20 6 9 17 4 12"/></svg>
+      <span>Imported the camera DMA-BUF fd directly into the GPU as a <code>GL_TEXTURE_EXTERNAL_OES</code> via <code>eglCreateImageKHR</code> with <code>EGL_LINUX_DMA_BUF_EXT</code> — zero-copy path confirmed working on the RPi4</span>
+    </li>
+    <li>
+      <svg class="ach-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="20 6 9 17 4 12"/></svg>
+      <span>Wrote GLSL ES 3.0 shaders: Mesa V3D does NV12→RGB conversion in hardware on the sampler path, so the fragment shader receives RGB directly. Added a red tint and a parking guide grid overlay (3 horizontal + 2 vertical lines)</span>
+    </li>
+    <li>
+      <svg class="ach-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="20 6 9 17 4 12"/></svg>
+      <span>Rendered to an offscreen FBO and saved the result to <code>/tmp/frame.png</code> via libpng — verified the image is visually correct (correct colors, correct orientation, grid lines visible)</span>
+    </li>
+    <li>
+      <svg class="ach-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="20 6 9 17 4 12"/></svg>
+      <span>Refactored <code>CaptureSession</code> into its own header and source files; added <code>capturedBuffer()</code> so the DMA-BUF can be handed off to the GPU stage after capture</span>
+    </li>
+    <li>
+      <svg class="ach-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="20 6 9 17 4 12"/></svg>
+      <span>Switched the build to the AGL SDK (suggested by the mentors): <code>bitbake -c populate_sdk</code> generates a proper SDK, then <code>cmake -DCMAKE_TOOLCHAIN_FILE="$CMAKE_TOOLCHAIN_FILE"</code> replaces the old manual <code>cross-build.sh</code> script</span>
+    </li>
+  </ul>
+
+  <p class="sec-label">Details</p>
+
+  <div class="prose">
+
+    <h2>Why headless</h2>
+    <p>
+      At this stage there is no Wayland compositor running and no display output wired up yet.
+      The goal this week was to verify that the full GPU path works end to end — DMA-BUF in,
+      pixels out — before tackling the display side. Running headless keeps the scope small:
+      one render, read the pixels back, save as PNG, check visually.
+    </p>
+    <p>
+      The <code>glReadPixels</code> readback is explicitly a debug path and is marked to be
+      removed in Stage 4. Once the pipeline drives a real Wayland surface there is no need to
+      ever pull pixels back to the CPU.
+    </p>
+
+    <h2>GBM + DRM render node</h2>
+    <p>
+      The entry point is <code>/dev/dri/renderD128</code>, the DRM render node for the V3D GPU
+      on the RPi4. Render nodes are unprivileged — no root, no display manager, no KMS/modesetting
+      needed. The flow is:
+    </p>
+    <ol>
+      <li>Open <code>/dev/dri/renderD128</code> with <code>O_RDWR | O_CLOEXEC</code></li>
+      <li>Wrap the fd with <code>gbm_create_device</code> — GBM is Mesa's generic buffer manager, the layer that lets EGL work without knowing whether it's on X11, Wayland, or nothing at all</li>
+      <li>Get an EGL display via <code>eglGetPlatformDisplayEXT(EGL_PLATFORM_GBM_MESA, gbm_dev, NULL)</code></li>
+      <li>Initialize EGL, choose a GLES2-capable config, create a GLES 3.0 context</li>
+      <li>Call <code>eglMakeCurrent(dpy, EGL_NO_SURFACE, EGL_NO_SURFACE, ctx)</code> — surfaceless context, no window needed</li>
+    </ol>
+    <p>
+      <code>EGL_KHR_surfaceless_context</code> is checked before the MakeCurrent call.
+      The V3D driver on the AGL RPi4 image supports it.
+    </p>
+
+    <h2>Importing the DMA-BUF</h2>
+    <p>
+      <code>eglCreateImageKHR</code>, <code>eglDestroyImageKHR</code>, and
+      <code>glEGLImageTargetTexture2DOES</code> are KHR/OES/EXT extension functions.
+      They are not guaranteed to be exported symbols from <code>libEGL.so</code>, so they
+      cannot be linked normally. They must be resolved at runtime:
+    </p>
+    <pre><code>pfn_CreateImage = (PFNEGLCREATEIMAGEKHRPROC)
+    eglGetProcAddress("eglCreateImageKHR");</code></pre>
+    <p>
+      The EGLImage is created from the DMA-BUF fd that libcamera handed back last week.
+      The NV12 format has two planes in a single fd — Y at offset 0 and UV at offset 2049920.
+      Both planes go into one <code>eglCreateImageKHR</code> call using
+      <code>EGL_LINUX_DMA_BUF_EXT</code>:
+    </p>
+    <pre><code>const EGLint attrs[] = {
+    EGL_WIDTH,                     1640,
+    EGL_HEIGHT,                    1232,
+    EGL_LINUX_DRM_FOURCC_EXT,      DRM_FORMAT_NV12,
+    EGL_DMA_BUF_PLANE0_FD_EXT,     fd,
+    EGL_DMA_BUF_PLANE0_OFFSET_EXT, 0,
+    EGL_DMA_BUF_PLANE0_PITCH_EXT,  1664,
+    EGL_DMA_BUF_PLANE1_FD_EXT,     fd,
+    EGL_DMA_BUF_PLANE1_OFFSET_EXT, 2049920,
+    EGL_DMA_BUF_PLANE1_PITCH_EXT,  1664,
+    EGL_NONE,
+};</code></pre>
+    <p>
+      The EGLImage is then bound as <code>GL_TEXTURE_EXTERNAL_OES</code> using
+      <code>glEGLImageTargetTexture2DOES</code>. This is the texture type required for
+      EGLImages — you cannot use <code>GL_TEXTURE_2D</code> for an imported DMA-BUF.
+    </p>
+
+    <h2>NV12 to RGB — hardware, not shader math</h2>
+    <p>
+      On Mesa V3D (the RPi4 GPU driver), binding an NV12 EGLImage as
+      <code>GL_TEXTURE_EXTERNAL_OES</code> and sampling it with
+      <code>samplerExternalOES</code> gives you RGB values directly. The driver performs
+      the YCbCr-to-RGB conversion in hardware on every texture fetch. The fragment shader
+      does not need to implement the BT.601 matrix manually.
+    </p>
+    <p>
+      The extension needed in the shader is <code>GL_OES_EGL_image_external_essl3</code>
+      (the ESSL3 variant, not the ESSL1 one) because the shaders target
+      <code>#version 300 es</code>.
+    </p>
+
+    <h2>The shaders</h2>
+    <p>
+      The vertex shader uses a trick to avoid allocating a VBO: it drives a single oversized
+      triangle from <code>gl_VertexID</code>. One <code>glDrawArrays(GL_TRIANGLES, 0, 3)</code>
+      call covers the entire viewport with no buffer setup:
+    </p>
+    <pre><code>#version 300 es
+out vec2 vTexCoord;
+void main() {
+    const vec2 pos[3] = vec2[3](
+        vec2(-1.0, -1.0),
+        vec2( 3.0, -1.0),
+        vec2(-1.0,  3.0)
+    );
+    vTexCoord   = pos[gl_VertexID] * 0.5 + 0.5;
+    gl_Position = vec4(pos[gl_VertexID], 0.0, 1.0);
+}</code></pre>
+    <p>
+      The fragment shader flips Y (DMA-BUF origin is top-left, GL UV origin is bottom-left),
+      applies a red tint (boost red channel, suppress green and blue), then draws a parking
+      guide grid using <code>step</code> to avoid branching:
+    </p>
+    <pre><code>#version 300 es
+#extension GL_OES_EGL_image_external_essl3 : require
+precision mediump float;
+uniform samplerExternalOES uTexture;
+in  vec2 vTexCoord;
+out vec4 fragColor;
+void main() {
+    vec2 uv  = vec2(vTexCoord.x, 1.0 - vTexCoord.y);
+    vec3 rgb = texture(uTexture, uv).rgb;
+
+    vec3 tinted = vec3(min(rgb.r * 1.5, 1.0), rgb.g * 0.5, rgb.b * 0.5);
+
+    float lw = 0.005;  /* ~6 pixels on a 1232-tall image */
+    float h1 = 1.0 - step(lw, abs(uv.y - 0.25));
+    float h2 = 1.0 - step(lw, abs(uv.y - 0.50));
+    float h3 = 1.0 - step(lw, abs(uv.y - 0.75));
+    float v1 = 1.0 - step(lw, abs(uv.x - 0.33));
+    float v2 = 1.0 - step(lw, abs(uv.x - 0.66));
+    float grid = max(max(max(h1, h2), max(h3, v1)), v2);
+
+    fragColor = vec4(mix(tinted, vec3(1.0), grid), 1.0);
+}</code></pre>
+
+    <h2>Offscreen FBO and PNG readback</h2>
+    <p>
+      Without a window surface, rendering goes into a <code>GL_RGBA8</code> renderbuffer
+      attached to an FBO. After <code>glDrawArrays</code> and <code>glFinish</code>,
+      <code>glReadPixels</code> pulls the result back to CPU memory. OpenGL returns rows
+      bottom-to-top, but PNG expects top-to-bottom, so the rows are written to libpng in
+      reverse order.
+    </p>
+    <p>
+      This CPU readback is the only part of the pipeline that is not zero-copy. It exists only
+      to visually confirm the shader output is correct. In Stage 4 it will be removed and the
+      rendered FBO will be shared directly with the display compositor via DMA-BUF export.
+    </p>
+
+    <h2>Switching to the AGL SDK build</h2>
+    <p>
+      The mentors at AGL suggested dropping the manual sysroots-components approach and
+      using <code>bitbake -c populate_sdk</code> instead:
+    </p>
+    <pre><code>bitbake &lt;someimage&gt;
+bitbake -c populate_sdk &lt;someimage&gt;</code></pre>
+    <p>
+      This installs a proper relocatable SDK under <code>/opt/agl-sdk/</code>. The
+      <code>environment-setup</code> script it provides sets <code>$CMAKE_TOOLCHAIN_FILE</code>
+      and all the cross-compiler variables, so the build is just:
+    </p>
+    <pre><code>source /opt/agl-sdk/21.90.0-aarch64-agl-image-flutter-debug/environment-setup-aarch64-agl-linux
+mkdir -p build &amp;&amp; cd build
+cmake -DCMAKE_TOOLCHAIN_FILE="$CMAKE_TOOLCHAIN_FILE" ..
+make -j$(nproc)</code></pre>
+    <p>
+      This replaces the old <code>cross-build.sh</code> script that was manually patching broken
+      symlinks left by <code>rm_work</code>.
+    </p>
+
+  </div>
+
+  <p class="sec-label">Challenges &amp; learnings</p>
+
+  <div class="cards-row">
+    <div class="mini-card">
+      <p class="mini-card-label">Challenge</p>
+      <p class="mini-card-body"><code>eglCreateImageKHR</code> and <code>glEGLImageTargetTexture2DOES</code> are not exported symbols from <code>libEGL.so</code> — trying to call them directly gives a linker error or a null pointer crash. Every EGL/GL extension function that isn't in the core must be resolved at runtime via <code>eglGetProcAddress</code>. Also: Mesa V3D rejected two-component DRM formats (e.g. <code>RG88</code>) for EGLImage — the format must be <code>DRM_FORMAT_NV12</code> with both planes declared in the attribute list.</p>
+    </div>
+    <div class="mini-card">
+      <p class="mini-card-label">Key learning</p>
+      <p class="mini-card-body">Mesa V3D performs NV12→RGB conversion in hardware on the <code>samplerExternalOES</code> sampler path — no BT.601 matrix in the shader needed. Also: <code>GL_TEXTURE_EXTERNAL_OES</code> is not optional for EGLImages; <code>GL_TEXTURE_2D</code> will silently fail. And the oversized-triangle trick (<code>gl_VertexID</code> + no VBO) is a clean way to do fullscreen rendering in GLES 3.0 without any buffer setup.</p>
+    </div>
+  </div>
+
+  <div class="next-week">
+    <p class="next-label">Next week →</p>
+    <p class="next-text">Wire the pipeline to a real Wayland surface — replace the offscreen FBO + <code>glReadPixels</code> debug path with a live render loop that outputs to the AGL compositor. This means setting up a Wayland client, creating an EGL window surface from a <code>wl_egl_window</code>, and looping over camera frames.</p>
+  </div>
+
+  <nav class="post-nav">
+    <a class="nav-link" href="week-2.html">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="15 18 9 12 15 6"/></svg>
+      Week 2
+    </a>
+    <span class="nav-spacer"></span>
+  </nav>
+
+  <footer>
+    <span class="footer-left">© 2026 Abdulrahman · GSoC AGL</span>
+    <div class="footer-right">
+      <a href="https://github.com/Abdulrahman-Yasser" target="_blank">GitHub</a>
+      <a href="https://www.automotivelinux.org/" target="_blank">AGL</a>
+      <a href="index.html">Blog</a>
+    </div>
+  </footer>
+
+</div>
+</body>
+</html>

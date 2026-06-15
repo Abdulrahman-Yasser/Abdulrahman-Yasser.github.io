@@ -246,6 +246,10 @@
       <svg class="ach-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="20 6 9 17 4 12"/></svg>
       <span>Fixed corrupted raw output: the camera aligns rows to 64 bytes (stride 1664, not 1640), so writing the full buffer directly produces diagonal lines in ffplay. Fixed by stripping the padding when saving — writing only the valid <code>width</code> bytes per row</span>
     </li>
+    <li>
+      <svg class="ach-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="20 6 9 17 4 12"/></svg>
+      <span>Switched the AGL Yocto image from Camera V1 (OV5647) to Camera V2 (IMX219) in <code>local.conf</code>: replaced <code>RASPBERRYPI_CAMERA = "1"</code> with <code>RASPBERRYPI_CAMERA_V2 = "1"</code> and dropped the manual <code>ov5647.dtbo</code> overlay append, <code>imx219.dtbo</code> is already in the default <code>RPI_KERNEL_DEVICETREE_OVERLAYS</code> list in <code>meta-raspberrypi</code></span>
+    </li>
   </ul>
 
   <p class="sec-label">Details</p>
@@ -397,7 +401,46 @@ ffplay -f rawvideo -pixel_format nv12 -video_size 1640x1232 frame.raw</code></pr
     <pre><code>for (unsigned int row = 0; row &lt; rows; ++row)
     out.write(src + row * stride, width);  // stride=1664, width=1640</code></pre>
 
-  </div>
+    <h2>Switching the Yocto image to Camera V2</h2>
+    <p>
+      The AGL image was originally configured for the RPi Camera V1 (OV5647 sensor). Two variables in
+      <code>raspberrypi4/conf/local.conf</code> control camera support at the Yocto level:
+    </p>
+    <ul>
+      <li><code>RASPBERRYPI_CAMERA_V2 = "1"</code> — tells the <code>rpi-config</code> recipe to write <code>dtoverlay=imx219</code> into <code>config.txt</code>, which the bootloader reads to activate the sensor driver at boot</li>
+      <li><code>RPI_KERNEL_DEVICETREE_OVERLAYS</code> — the list of <code>.dtbo</code> files compiled from the RPi kernel source and deployed to the boot partition</li>
+    </ul>
+    <p>
+      The <code>.dtbo</code> files come from the Linux kernel build — specifically the
+      <code>linux-raspberrypi</code> recipe compiles all the overlay DTS sources in the kernel tree into
+      <code>.dtbo</code> files and deploys them to the boot partition as <code>IMAGE_BOOT_FILES</code>.
+      For V1 (OV5647), the overlay was not in the default list so it had to be appended manually.
+      For V2 (IMX219), <code>overlays/imx219.dtbo</code> is already included in the default
+      <code>RPI_KERNEL_DEVICETREE_OVERLAYS</code> list inside
+      <code>meta-raspberrypi/conf/machine/include/rpi-base.inc</code>, so no manual append is needed.
+      The change reduces to two lines:
+    </p>
+    <pre><code># Before (Camera V1)
+RASPBERRYPI_CAMERA = "1"
+RPI_KERNEL_DEVICETREE_OVERLAYS:append = " overlays/ov5647.dtbo"
+
+# After (Camera V2)
+RASPBERRYPI_CAMERA_V2 = "1"</code></pre>
+    <p>
+      To verify the variable is actually wired up and not just documentation, a quick grep over the
+      BSP layers shows exactly where it lands:
+    </p>
+    <pre><code>$ grep -r RASPBERRYPI_CAMERA_V2 .
+./bsp/meta-raspberrypi/docs/extra-build-config.md:    RASPBERRYPI_CAMERA_V2 = "1"
+./bsp/meta-raspberrypi/recipes-bsp/bootfiles/rpi-config_git.bb:    if [ "${RASPBERRYPI_CAMERA_V2}" = "1" ]; then</code></pre>
+    <p>
+      Two hits: the docs entry is just the usage example, but the <code>rpi-config_git.bb</code> hit
+      is the real action — that recipe's install step writes <code>dtoverlay=imx219</code> into
+      <code>config.txt</code> when the variable is set, which is exactly what tells the bootloader
+      to load the IMX219 driver at boot.
+    </p>
+
+  </div><!-- end .prose -->
 
   <p class="sec-label">Challenges &amp; learnings</p>
 
@@ -423,6 +466,10 @@ ffplay -f rawvideo -pixel_format nv12 -video_size 1640x1232 frame.raw</code></pr
       Week 1
     </a>
     <span class="nav-spacer"></span>
+    <a class="nav-link" href="week-3.html">
+      Week 3
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="9 18 15 12 9 6"/></svg>
+    </a>
   </nav>
 
   <footer>
