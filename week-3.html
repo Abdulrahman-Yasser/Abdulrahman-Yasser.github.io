@@ -431,7 +431,7 @@ make -j$(nproc)</code></pre>
 
   <div class="next-week">
     <p class="next-label">Next week →</p>
-    <p class="next-text">Wire the pipeline to a real Wayland surface — replace the offscreen FBO + <code>glReadPixels</code> debug path with a live render loop that outputs to the AGL compositor. This means setting up a Wayland client, creating an EGL window surface from a <code>wl_egl_window</code>, and looping over camera frames.</p>
+    <p class="next-text">Research OpenGL rendering patterns and options relevant to the backup camera pipeline: shader-based distortion correction, multi-pass rendering, render-to-texture chaining, and how other automotive/embedded camera pipelines structure their GL stages. Goal is to decide on the right approach before wiring up the Wayland surface.</p>
   </div>
 
   <nav class="post-nav">
