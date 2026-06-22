@@ -1,0 +1,703 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Week 4 · GSoC 2026 · AGL Backup Camera</title>
+  <meta name="description" content="Week 4 progress update — continuous render loop, EGLImage pre-caching, GPU timer queries, and a full three-configuration performance comparison on the RPi4." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg:        #0d0f10;
+      --surface:   #141618;
+      --surface2:  #1c1f21;
+      --border:    rgba(255,255,255,0.08);
+      --border2:   rgba(255,255,255,0.14);
+      --text:      #e8e6e0;
+      --muted:     #8a8780;
+      --hint:      #4a4845;
+      --green:     #3fcf8e;
+      --green-dim: rgba(63,207,142,0.12);
+      --amber:     #f5a623;
+      --blue:      #5b9cf6;
+      --blue-dim:  rgba(91,156,246,0.1);
+      --mono: 'IBM Plex Mono', monospace;
+      --sans: 'IBM Plex Sans', sans-serif;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--sans);
+      font-size: 15px;
+      line-height: 1.75;
+      min-height: 100vh;
+    }
+
+    .site { max-width: 720px; margin: 0 auto; padding: 3rem 1.5rem 5rem; }
+
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 3rem;
+      padding-bottom: 1.25rem;
+      border-bottom: 0.5px solid var(--border);
+      flex-wrap: wrap;
+      gap: 0.75rem;
+    }
+    .back-link {
+      display: inline-flex; align-items: center; gap: 6px;
+      font-family: var(--mono); font-size: 12px;
+      color: var(--muted); text-decoration: none;
+      transition: color 0.15s;
+    }
+    .back-link:hover { color: var(--text); }
+    .back-link svg { width: 14px; height: 14px; }
+    .topbar-brand { font-family: var(--mono); font-size: 12px; color: var(--hint); }
+
+    .post-header { margin-bottom: 2.5rem; }
+    .post-eyebrow {
+      display: inline-flex; align-items: center; gap: 8px;
+      font-family: var(--mono); font-size: 11px;
+      color: var(--green);
+      border: 0.5px solid rgba(63,207,142,0.3);
+      background: var(--green-dim);
+      border-radius: 4px; padding: 4px 10px; margin-bottom: 1rem;
+    }
+    h1 {
+      font-family: var(--sans); font-size: clamp(22px, 4vw, 32px);
+      font-weight: 600; color: var(--text); line-height: 1.25; margin-bottom: 0.75rem;
+    }
+    .post-meta {
+      display: flex; flex-wrap: wrap; gap: 1.25rem;
+      font-family: var(--mono); font-size: 12px; color: var(--muted);
+    }
+
+    .sec-label {
+      display: flex; align-items: center; gap: 10px;
+      font-family: var(--mono); font-size: 11px; color: var(--hint);
+      letter-spacing: 0.1em; text-transform: uppercase;
+      margin: 2rem 0 1rem;
+    }
+    .sec-label::after { content: ''; flex: 1; height: 0.5px; background: var(--border); }
+
+    .achievement-list { list-style: none; display: flex; flex-direction: column; gap: 10px; margin-bottom: 1.5rem; }
+    .achievement-list li {
+      display: flex; align-items: flex-start; gap: 10px;
+      font-size: 14px; color: var(--text); line-height: 1.55;
+    }
+    .ach-icon { width: 16px; height: 16px; color: var(--green); flex-shrink: 0; margin-top: 3px; }
+
+    .prose { font-size: 15px; color: var(--text); line-height: 1.8; }
+    .prose p { margin-bottom: 1.1rem; }
+    .prose h2 {
+      font-family: var(--sans); font-size: 18px; font-weight: 500;
+      color: var(--text); margin: 2rem 0 0.75rem;
+    }
+    .prose h3 {
+      font-family: var(--sans); font-size: 15px; font-weight: 500;
+      color: var(--muted); margin: 1.5rem 0 0.5rem;
+    }
+    .prose code {
+      font-family: var(--mono); font-size: 13px;
+      background: var(--surface2); border: 0.5px solid var(--border2);
+      border-radius: 4px; padding: 2px 6px; color: var(--green);
+    }
+    .prose pre {
+      background: var(--surface); border: 0.5px solid var(--border2);
+      border-radius: 8px; padding: 1.25rem; overflow-x: auto;
+      font-family: var(--mono); font-size: 13px; color: var(--text);
+      margin: 1rem 0 1.5rem; line-height: 1.6;
+    }
+    .prose pre code { background: none; border: none; padding: 0; color: inherit; font-size: inherit; }
+    .prose a { color: var(--blue); text-decoration: none; }
+    .prose a:hover { text-decoration: underline; }
+    .prose ul, .prose ol { padding-left: 1.4rem; margin-bottom: 1rem; }
+    .prose li { margin-bottom: 0.35rem; }
+    .prose blockquote {
+      border-left: 3px solid var(--border2); padding-left: 1rem;
+      color: var(--muted); font-style: italic; margin: 1rem 0;
+    }
+
+    .cards-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 1.5rem; }
+    @media (max-width: 540px) { .cards-row { grid-template-columns: 1fr; } }
+    .mini-card {
+      background: var(--surface); border: 0.5px solid var(--border);
+      border-radius: 10px; padding: 1rem;
+    }
+    .mini-card-label {
+      font-family: var(--mono); font-size: 10px; color: var(--hint);
+      letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 8px;
+    }
+    .mini-card-body { font-size: 13px; color: var(--text); line-height: 1.5; }
+
+    .plan-table {
+      width: 100%; border-collapse: collapse; margin: 1rem 0 1.5rem;
+      font-size: 13px;
+    }
+    .plan-table th {
+      font-family: var(--mono); font-size: 10px; color: var(--hint);
+      letter-spacing: 0.08em; text-transform: uppercase;
+      text-align: left; padding: 0 0.75rem 0.6rem;
+      border-bottom: 0.5px solid var(--border2);
+    }
+    .plan-table td {
+      padding: 0.55rem 0.75rem;
+      border-bottom: 0.5px solid var(--border);
+      color: var(--text); vertical-align: top; line-height: 1.5;
+    }
+    .plan-table tr:last-child td { border-bottom: none; }
+    .plan-table td:first-child {
+      font-family: var(--mono); font-size: 12px;
+      color: var(--muted); white-space: nowrap;
+    }
+    .plan-table td.good { color: var(--green); font-family: var(--mono); font-size: 12px; }
+    .plan-table td.mono { font-family: var(--mono); font-size: 12px; }
+
+    .stat-grid {
+      display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;
+      margin: 1rem 0 1.5rem;
+    }
+    @media (max-width: 540px) { .stat-grid { grid-template-columns: 1fr; } }
+    .stat-card {
+      background: var(--surface); border: 0.5px solid var(--border);
+      border-radius: 10px; padding: 1rem; text-align: center;
+    }
+    .stat-value {
+      font-family: var(--mono); font-size: 22px; font-weight: 500;
+      color: var(--green); display: block; margin-bottom: 4px;
+    }
+    .stat-label {
+      font-family: var(--mono); font-size: 10px; color: var(--hint);
+      letter-spacing: 0.06em; text-transform: uppercase;
+    }
+
+    .next-week {
+      background: var(--surface); border: 0.5px solid var(--border);
+      border-left: 3px solid var(--amber); border-radius: 10px;
+      padding: 1rem 1.25rem; margin-top: 2rem;
+    }
+    .next-label { font-family: var(--mono); font-size: 11px; color: var(--amber); margin-bottom: 8px; }
+    .next-text { font-size: 14px; color: var(--text); }
+    .next-list { list-style: none; display: flex; flex-direction: column; gap: 6px; margin-top: 8px; }
+    .next-list li { display: flex; align-items: flex-start; gap: 8px; font-size: 14px; color: var(--text); }
+    .next-list li::before { content: '→'; color: var(--amber); font-family: var(--mono); font-size: 12px; margin-top: 2px; flex-shrink: 0; }
+
+    .post-nav {
+      display: flex; justify-content: space-between; align-items: center;
+      margin-top: 3rem; padding-top: 1.5rem;
+      border-top: 0.5px solid var(--border);
+      flex-wrap: wrap; gap: 1rem;
+    }
+    .nav-link {
+      display: inline-flex; align-items: center; gap: 6px;
+      font-family: var(--mono); font-size: 12px;
+      color: var(--muted); text-decoration: none;
+      transition: color 0.15s;
+    }
+    .nav-link:hover { color: var(--text); }
+    .nav-link svg { width: 14px; height: 14px; }
+    .nav-spacer { flex: 1; }
+
+    footer {
+      border-top: 0.5px solid var(--border);
+      padding-top: 1.5rem; margin-top: 2rem;
+      display: flex; justify-content: space-between; align-items: center;
+      flex-wrap: wrap; gap: 0.75rem;
+    }
+    .footer-left { font-family: var(--mono); font-size: 12px; color: var(--hint); }
+    .footer-right { display: flex; gap: 14px; }
+    .footer-right a {
+      color: var(--hint); text-decoration: none;
+      font-size: 12px; font-family: var(--mono); transition: color 0.15s;
+    }
+    .footer-right a:hover { color: var(--muted); }
+  </style>
+</head>
+<body>
+<div class="site">
+
+  <nav class="topbar">
+    <a class="back-link" href="index.html">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="15 18 9 12 15 6"/></svg>
+      Back to blog
+    </a>
+    <span class="topbar-brand">gsoc-2026 / agl / week-4</span>
+  </nav>
+
+  <header class="post-header">
+    <div class="post-eyebrow">Week 4 · GSoC 2026 · AGL</div>
+    <h1>Week 4: Continuous Pipeline, Performance Profiling &amp; Zero-Copy Proof</h1>
+    <div class="post-meta">
+      <span>Jun 16 – Jun 22, 2026</span>
+      <span>Abdulrahman</span>
+      <a href="https://github.com/Abdulrahman-Yasser/libcamera-dmabuf-capture" target="_blank" style="color:var(--blue);text-decoration:none;font-family:var(--mono);font-size:12px;">github: libcamera-dmabuf-capture</a>
+    </div>
+  </header>
+
+  <p class="sec-label">This week</p>
+
+  <ul class="achievement-list">
+    <li>
+      <svg class="ach-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="20 6 9 17 4 12"/></svg>
+      <span>Refactored from a single-shot capture to a <strong>continuous 30fps render loop</strong> — separated the GPU pipeline into a <code>GpuRenderer</code> class and rewrote <code>CaptureSession</code> as a thread-safe producer/consumer queue with condition variables</span>
+    </li>
+    <li>
+      <svg class="ach-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="20 6 9 17 4 12"/></svg>
+      <span><strong>Pre-cached EGLImages at init</strong> instead of recreating them per frame — <code>eglCreateImageKHR</code> is now called once per buffer at startup and stored in an <code>unordered_map&lt;fd, EGLImage&gt;</code>. Zero EGL calls per frame.</span>
+    </li>
+    <li>
+      <svg class="ach-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="20 6 9 17 4 12"/></svg>
+      <span>Added <strong>GPU timer queries</strong> via <code>GL_EXT_disjoint_timer_query</code> — reports true GPU execution time in nanoseconds without stalling the CPU, double-buffered to avoid blocking the render loop</span>
+    </li>
+    <li>
+      <svg class="ach-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="20 6 9 17 4 12"/></svg>
+      <span>Fixed 15fps → <strong>30fps</strong> using <code>FrameDurationLimits</code> — discovered the bottleneck was libcamera's AE algorithm allowing 66ms exposures, not the sensor or GPU</span>
+    </li>
+    <li>
+      <svg class="ach-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="20 6 9 17 4 12"/></svg>
+      <span>Ran a full <strong>three-configuration performance benchmark</strong> using <code>perf stat</code>, <code>vmstat</code>, V3D debugfs counters, and in-app timing — compared 1280×720@15fps, 1280×720@30fps, and 1640×1232@15fps</span>
+    </li>
+    <li>
+      <svg class="ach-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="20 6 9 17 4 12"/></svg>
+      <span>Proved zero-copy end-to-end: <code>page-faults: 0</code> in <code>perf stat</code> across all configurations — no pixel data ever touches CPU RAM during steady-state rendering</span>
+    </li>
+    <li>
+      <svg class="ach-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="20 6 9 17 4 12"/></svg>
+      <span>Added keyboard snapshot trigger — press <code>s</code> to save the current GPU frame as a PNG; the only time <code>glReadPixels</code> is called, on demand, without disturbing the render loop</span>
+    </li>
+    <li>
+      <svg class="ach-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="20 6 9 17 4 12"/></svg>
+      <span>Built <code>agl-image-flutter-debug-raspberrypi4-64</code> — the debug image exposes Flutter tooling and better logging; all pipeline tests now run on this image instead of the production one</span>
+    </li>
+    <li>
+      <svg class="ach-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="20 6 9 17 4 12"/></svg>
+      <span>Assembled the <strong>Raspberry Pi 5</strong>. Ordered the power supply, and new camera cable to fit the rpi5 camera input; </span>
+    </li>
+    <li>
+      <svg class="ach-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="20 6 9 17 4 12"/></svg>
+      <span>Started building the AGL image for RPi5 — hit a <strong>full disk</strong> during the Yocto build; will clear space and restart the build next week</span>
+    </li>
+  </ul>
+
+  <p class="sec-label">Key numbers</p>
+
+  <div class="stat-grid">
+    <div class="stat-card">
+      <span class="stat-value">30.0</span>
+      <span class="stat-label">fps achieved</span>
+    </div>
+    <div class="stat-card">
+      <span class="stat-value">0</span>
+      <span class="stat-label">page faults at runtime</span>
+    </div>
+    <div class="stat-card">
+      <span class="stat-value">12.6%</span>
+      <span class="stat-label">CPU utilized @ 30fps</span>
+    </div>
+    <div class="stat-card">
+      <span class="stat-value">0.493ms</span>
+      <span class="stat-label">CPU time per render call</span>
+    </div>
+    <div class="stat-card">
+      <span class="stat-value">516 MHz</span>
+      <span class="stat-label">V3D clock under load</span>
+    </div>
+    <div class="stat-card">
+      <span class="stat-value">28.6 MB</span>
+      <span class="stat-label">process RSS (stable)</span>
+    </div>
+  </div>
+
+  <p class="sec-label">Live output — GPU snapshots</p>
+
+  <style>
+    .snap-compare {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 12px;
+      margin: 0 0 1.5rem;
+    }
+    @media (max-width: 540px) { .snap-compare { grid-template-columns: 1fr; } }
+    .snap-item { display: flex; flex-direction: column; gap: 8px; }
+    .snap-item img {
+      width: 100%; border-radius: 8px;
+      border: 0.5px solid var(--border2);
+      display: block;
+    }
+    .snap-caption {
+      font-family: var(--mono); font-size: 11px; color: var(--muted);
+      line-height: 1.5;
+    }
+    .snap-caption strong { color: var(--green); }
+  </style>
+
+  <div class="snap-compare">
+    <div class="snap-item">
+      <img src="snapshot_000_1640.png" alt="" />
+      <p class="snap-caption">
+        <strong>1640×1232 @ 15fps</strong>
+      </p>
+    </div>
+    <div class="snap-item">
+      <img src="snapshot_001_720.png" alt="" />
+      <p class="snap-caption">
+        <strong>1280×720 @ 30fps</strong>
+      </p>
+    </div>
+  </div>
+
+  <p class="prose" style="font-size:13px;color:var(--muted);margin-bottom:2rem;">
+    Both frames captured live from the IMX219 camera via the keyboard snapshot trigger (press <code>s</code>). The GPU rendered each frame — red tint, Y-flip, grid overlay — directly from the DMA-BUF without any CPU copy. <code>glReadPixels</code> was called once, on demand, only when <code>s</code> was pressed.
+  </p>
+
+  <p class="sec-label">Details</p>
+
+  <div class="prose">
+
+    <h2>Why the single-shot approach had to go</h2>
+    <p>
+      Last week's app captured one frame, rendered it, saved a PNG, and exited. That was
+      enough to prove the DMA-BUF → EGL → GPU chain works, but it measured nothing meaningful:
+      every run paid a ~460ms Mesa JIT shader compile cost, cold EGL import overhead,
+      and <code>glReadPixels</code> stall — none of which exist in a real pipeline.
+    </p>
+    <p>
+      The goal this week was to turn it into a proper continuous loop that runs indefinitely
+      and can be measured while it's actually doing work. That required splitting the
+      single-file program into real components with clear responsibilities.
+    </p>
+
+    <h2>Continuous loop architecture</h2>
+    <p>
+      The refactor introduced two main classes:
+    </p>
+    <p>
+      <strong>GpuRenderer</strong> — owns all GPU state for the process lifetime.
+      <code>init()</code> compiles the shader once, creates the FBO once, and pre-creates
+      one EGLImage + GL texture per buffer in the libcamera pool. <code>render_frame()</code>
+      does nothing except a map lookup, bind, draw, and flush — the fast path has zero
+      EGL calls and zero allocations. <code>cleanup()</code> destroys everything in the
+      correct order.
+    </p>
+    <p>
+      <strong>CaptureSession</strong> — wraps libcamera's callback-based API as a
+      producer/consumer queue. The libcamera thread pushes completed frames onto a
+      <code>std::queue</code> protected by a mutex. The main thread calls
+      <code>nextFrame()</code> which blocks on a condition variable until a frame is ready.
+      Warmup (30 frames for AE/AWB to settle) is handled silently before the queue is
+      ever exposed to the caller.
+    </p>
+    <p>
+      The main loop is then straightforward:
+    </p>
+    <pre><code>while (g_running) {
+    auto [buf, req] = session.nextFrame();   // blocks until camera delivers
+    renderer.render_frame(buf);              // GPU: bind → draw → flush
+    req-&gt;reuse(ReuseBuffers);
+    camera-&gt;queueRequest(req);              // camera buffer back in pool
+}</code></pre>
+    <p>
+      All 4 camera buffers are queued at startup so the ISP always has an empty buffer
+      waiting while the GPU is rendering the previous frame. True pipeline parallelism.
+    </p>
+
+    <h2>EGLImage pre-caching</h2>
+    <p>
+      The original code called <code>eglCreateImageKHR()</code> at the start of every
+      frame. This is unnecessary and expensive: the DMA-BUF fd→EGLImage binding is
+      stable for the entire lifetime of the libcamera buffer pool because libcamera
+      allocates buffers once and reuses them. The fd never changes.
+    </p>
+    <p>
+      The fix: at <code>GpuRenderer::init()</code>, loop over every buffer in the pool,
+      call <code>eglCreateImageKHR()</code> once, and store the result in:
+    </p>
+    <pre><code>std::unordered_map&lt;int, FrameGLResources&gt; fd_cache_;
+// key: DMA-BUF fd   value: {EGLImageKHR, GLuint texture}</code></pre>
+    <p>
+      <code>render_frame()</code> then does one O(1) map lookup. The per-frame EGL overhead
+      dropped to zero.
+    </p>
+
+    <h2>Why glFlush and not glFinish in the render loop</h2>
+    <p>
+      <code>glFinish()</code> blocks the CPU until the GPU has completed all submitted work.
+      In a real pipeline this is wasteful: the camera delivers a new frame every 33ms,
+      the GPU finishes rendering in ~6ms, so there are ~27ms where the CPU would be
+      sitting idle inside <code>glFinish()</code> doing nothing.
+    </p>
+    <p>
+      <code>glFlush()</code> submits the GPU command buffer and returns immediately.
+      The CPU can requeue the camera buffer and call <code>nextFrame()</code> right away.
+      When the next frame arrives (33ms later), the GPU has long finished (6ms).
+      The camera's natural pacing provides the synchronization — no explicit CPU stall needed.
+    </p>
+    <p>
+      <code>glFinish()</code> is still used in two places where it's correct: inside
+      <code>save_snapshot()</code> before <code>glReadPixels()</code>, and in benchmark mode.
+    </p>
+
+    <h2>GPU timer queries — true GPU time, no CPU stall</h2>
+    <p>
+      CPU-side timing around <code>glDrawArrays</code> + <code>glFinish()</code> measures
+      wall-clock time that includes driver overhead and the explicit stall cost itself —
+      it perturbs the pipeline it's trying to measure.
+    </p>
+    <p>
+      <code>GL_EXT_disjoint_timer_query</code> measures GPU execution time as counted by
+      the GPU's own clock, in nanoseconds, without stalling the CPU. The implementation
+      is single-buffered: begin query → draw → end query → flush. At the start of the
+      <em>next</em> frame, read the result. At 30fps (33ms between frames) the GPU
+      finishes in ~6ms, so the result is always available — <code>GL_QUERY_RESULT</code>
+      returns instantly with no stall.
+    </p>
+
+    <h2>15fps → 30fps: it was the AE algorithm, not the sensor</h2>
+    <p>
+      After changing resolution to 1280×720 the app was still running at 15fps. The IMX219
+      at 1280×720 is physically capable of 120fps. The GPU can handle 91fps at this
+      resolution. The camera was delivering at 15fps because libcamera's Auto-Exposure
+      algorithm allows frame durations up to 66ms (1/15s) indoors to maximize light
+      collection.
+    </p>
+    <p>
+      The fix is <code>FrameDurationLimits</code>, passed to <code>camera-&gt;start()</code>:
+    </p>
+    <pre><code>libcamera::ControlList controls;
+int64_t fdl[2] = { 33333LL, 33333LL };  // µs → exactly 30fps
+controls.set(libcamera::controls::FrameDurationLimits,
+             libcamera::Span&lt;const int64_t, 2&gt;(fdl));
+camera-&gt;start(&amp;controls);</code></pre>
+    <p>
+      This caps the maximum exposure time to 33ms so AE can still adapt to lighting
+      changes, but the frame rate is now locked at 30fps. Disabling AE entirely
+      (<code>AeEnable = false</code>) would also work but would give a fixed exposure
+      that can't adapt.
+    </p>
+
+    <h2>Hardware baseline: V3D 4.2 on RPi4</h2>
+    <p>
+      Before benchmarking it's important to know the hardware. The debugfs interface at
+      <code>/sys/kernel/debug/dri/fec00000.v3d/</code> exposed the V3D identity:
+    </p>
+    <pre><code>Revision:  4.2.14.0
+MMU:       yes
+TFU:       yes      ← Texture Formatting Unit (HW format conversion)
+L3C:       no (0kb) ← NO L3 texture cache
+Core 0:
+  Slices:  2
+  TMUs:    2        ← one Texture Memory Unit per slice
+  QPUs:    8        ← 4 shader cores per slice</code></pre>
+    <p>
+      The most important line is <code>L3C: no</code>. The V3D 4.2 has no L3 texture cache.
+      Every texture sample that misses the small per-TMU cache goes directly to DRAM.
+      This makes DRAM bandwidth the primary performance constraint for the shader —
+      not ALU throughput. This is why the choice of <code>samplerExternalOES</code>
+      (one texture fetch, hardware NV12→RGB) over a manual two-plane approach
+      (two texture fetches + shader math) matters so much on this chip.
+    </p>
+    <p>
+      The GPU clock was measured via <code>measure_clock</code>:
+    </p>
+    <pre><code># Idle (no app running)
+cycles: 251069155 (251.0 MHz)
+
+# Under load (app rendering at 30fps)
+cycles: 515946781 (516.0 MHz)</code></pre>
+    <p>
+      The V3D devfreq governor doubles the clock when the GPU is under sustained load.
+      This is the expected behavior — the governor scales up from the idle 251MHz to
+      the full 516MHz within a few frames of starting the render loop.
+    </p>
+
+    <h2>Performance benchmark: three configurations</h2>
+    <p>
+      All three configurations were measured with the same tools: <code>perf stat -p $PID sleep 10</code>,
+      <code>vmstat 1 10</code>, V3D <code>bo_stats</code>, and the app's own in-process timing.
+    </p>
+
+    <table class="plan-table">
+      <thead>
+        <tr>
+          <th>Metric</th>
+          <th>1280×720 @ 15fps</th>
+          <th>1280×720 @ 30fps</th>
+          <th>1640×1232 @ 15fps</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>CPU utilized</td>
+          <td class="mono">0.074 cores</td>
+          <td class="mono">0.126 cores</td>
+          <td class="mono">0.074 cores</td>
+        </tr>
+        <tr>
+          <td>Context switches</td>
+          <td class="mono">~2,200 / 10s</td>
+          <td class="mono">3,838 / 10s</td>
+          <td class="mono">~1,961 / 10s</td>
+        </tr>
+        <tr>
+          <td>Page faults</td>
+          <td class="good">0</td>
+          <td class="good">0</td>
+          <td class="good">0</td>
+        </tr>
+        <tr>
+          <td>GPU clock</td>
+          <td class="mono">516 MHz</td>
+          <td class="mono">516 MHz</td>
+          <td class="mono">502 MHz</td>
+        </tr>
+        <tr>
+          <td>GPU BOs</td>
+          <td class="mono">25 / 14.8 MB</td>
+          <td class="mono">25 / 14.8 MB</td>
+          <td class="mono">25 / 31.1 MB</td>
+        </tr>
+        <tr>
+          <td>CPU idle</td>
+          <td class="mono">97–99%</td>
+          <td class="mono">96–97%</td>
+          <td class="mono">97–99%</td>
+        </tr>
+        <tr>
+          <td>VmRSS</td>
+          <td class="mono">28,100 kB</td>
+          <td class="mono">28,632 kB</td>
+          <td class="mono">28,100 kB</td>
+        </tr>
+        <tr>
+          <td>Theo. bandwidth</td>
+          <td class="mono">72.6 MB/s</td>
+          <td class="mono">145.2 MB/s</td>
+          <td class="mono">159.0 MB/s</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <p>
+      The app's own output at 1280×720 @ 30fps:
+    </p>
+    <pre><code>[perf] 30.0 fps | render_cpu avg 0.493 ms | RSS 28632 kB | frames 4976</code></pre>
+
+    <h3>What the numbers say</h3>
+    <p>
+      <strong>Zero-copy is confirmed.</strong> Page faults are zero across all three
+      configurations and all measurement runs. No pixel data crosses from GPU memory to
+      CPU RAM during the render loop. A pipeline with CPU copies would show thousands of
+      page faults per second from new <code>mmap()</code> regions.
+    </p>
+    <p>
+      <strong>CPU scales with frame rate, not resolution.</strong> Going from 15fps to
+      30fps at 1280×720 doubled the CPU usage (7.4% → 12.6%). Going from 1280×720 to
+      1640×1232 at the same 15fps left CPU usage identical. The CPU does no pixel work —
+      its load comes from libcamera callbacks and mutex operations, which scale with
+      frame count, not frame size.
+    </p>
+    <p>
+      <strong>GPU memory scales with resolution, not frame rate.</strong> The number of
+      GPU buffer objects stayed at 25 across all configurations; only their size changed.
+      14.8 MB at 720p vs 31.1 MB at 1232p — a direct reflection of the larger NV12
+      camera buffers (4 × 2.89 MB instead of 4 × 1.32 MB) and the larger FBO
+      (7.7 MB instead of 3.5 MB).
+    </p>
+    <p>
+      <strong>1640×1232 @ 15fps uses more DRAM bandwidth than 1280×720 @ 30fps.</strong>
+      This is counterintuitive but the math is clear: a 1232p frame is 2.2× larger than
+      a 720p frame, which more than offsets running at half the frame rate.
+      For a backup camera, 1280×720 @ 30fps is the better operating point — lower
+      bandwidth, smoother motion, smaller GPU memory footprint.
+    </p>
+    <p>
+      <strong>The GPU clock dropped slightly at 1640×1232 (502 vs 516 MHz).</strong>
+      At 15fps the GPU renders in ~11ms then sits idle for ~55ms. The devfreq governor
+      has time to ramp the clock back down during those idle windows. At 30fps the idle
+      window is only ~22ms — the governor holds the clock at full speed.
+    </p>
+    <p>
+      <strong>render_frame() costs 0.493ms on the CPU.</strong> This is the cost of
+      the GL state machine calls (<code>glBindTexture</code>, <code>glDrawArrays</code>),
+      GPU timer query result retrieval, and <code>glFlush()</code>. At 33.3ms per frame
+      this is 1.48% of the frame budget. The remaining 98.5% the CPU is sleeping,
+      waiting on the camera.
+    </p>
+
+    <h2>Keyboard snapshot without disturbing the loop</h2>
+    <p>
+      Adding a way to save a PNG mid-stream without interrupting the render loop required
+      a bit of care. The solution: set the terminal to raw mode (<code>tcsetattr</code>
+      with <code>~(ICANON|ECHO)</code>) and stdin to non-blocking (<code>fcntl O_NONBLOCK</code>).
+      After each <code>render_frame()</code>, a single <code>read(STDIN_FILENO, &amp;key, 1)</code>
+      is attempted. When no key is pressed this fails immediately — the cost is one failed
+      syscall, microseconds. When <code>s</code> is pressed, <code>glFinish()</code> +
+      <code>glReadPixels()</code> + libpng encoding runs, then the loop resumes.
+    </p>
+    <p>
+      This is the only path where pixel data leaves the GPU. It is explicitly on-demand
+      and does not affect the FPS measurement.
+    </p>
+
+  </div>
+
+  <p class="sec-label">Challenges &amp; learnings</p>
+
+  <div class="cards-row">
+    <div class="mini-card">
+      <p class="mini-card-label">Challenge</p>
+      <p class="mini-card-body">
+        The app was stuck at 15fps even after switching to 1280×720 — a resolution where
+        the IMX219 can theoretically do 120fps. Suspected the GPU or driver at first.
+        The real cause was libcamera's AE algorithm silently allowing 66ms frame durations
+        indoors. Nothing in the logs said "running at 15fps by choice." The fix
+        (<code>FrameDurationLimits</code>) is a single control passed to
+        <code>camera-&gt;start()</code> — but finding it required reading the libcamera
+        controls documentation carefully.
+      </p>
+    </div>
+    <div class="mini-card">
+      <p class="mini-card-label">Key learning</p>
+      <p class="mini-card-body">
+        The V3D 4.2 has no L3 texture cache at all. This makes memory bandwidth the
+        dominant GPU performance constraint — not shader ALU throughput. Every design
+        decision that reduces texture fetches or memory copies (samplerExternalOES,
+        EGLImage pre-caching, glFlush instead of glFinish) directly addresses the real
+        bottleneck on this hardware. Also: <code>page-faults: 0</code> in
+        <code>perf stat</code> is the single most convincing zero-copy proof — it rules
+        out any hidden mmap/memcpy in the hot path.
+      </p>
+    </div>
+  </div>
+
+  <div class="next-week">
+    <p class="next-label">Next week →</p>
+    <ul class="next-list">
+      <li>Free disk space and complete the AGL image build for Raspberry Pi 5 — get a first boot and verify the camera pipeline works on the newer hardware</li>
+      <li>Continue the performance measurement series — GPU timer query min/max/avg from the in-app report, cache warm-up curve (first 10 frames), and a direct RPi4 vs RPi5 comparison table</li>
+    </ul>
+  </div>
+
+  <nav class="post-nav">
+    <a class="nav-link" href="week-3.html">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="15 18 9 12 15 6"/></svg>
+      Week 3
+    </a>
+    <span class="nav-spacer"></span>
+  </nav>
+
+  <footer>
+    <span class="footer-left">© 2026 Abdulrahman · GSoC AGL</span>
+    <div class="footer-right">
+      <a href="https://github.com/Abdulrahman-Yasser" target="_blank">GitHub</a>
+      <a href="https://www.automotivelinux.org/" target="_blank">AGL</a>
+      <a href="index.html">Blog</a>
+    </div>
+  </footer>
+
+</div>
+</body>
+</html>
