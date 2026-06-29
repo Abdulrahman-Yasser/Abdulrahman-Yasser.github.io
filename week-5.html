@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Week 5 · GSoC 2026 · AGL Backup Camera</title>
+  <meta name="description" content="Week 5 progress update — building AGL images for RPi4 and RPi5, camera fix, and first RPi5 boot." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg:        #0d0f10;
+      --surface:   #141618;
+      --surface2:  #1c1f21;
+      --border:    rgba(255,255,255,0.08);
+      --border2:   rgba(255,255,255,0.14);
+      --text:      #e8e6e0;
+      --muted:     #8a8780;
+      --hint:      #4a4845;
+      --green:     #3fcf8e;
+      --green-dim: rgba(63,207,142,0.12);
+      --amber:     #f5a623;
+      --blue:      #5b9cf6;
+      --blue-dim:  rgba(91,156,246,0.1);
+      --mono: 'IBM Plex Mono', monospace;
+      --sans: 'IBM Plex Sans', sans-serif;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--sans);
+      font-size: 15px;
+      line-height: 1.75;
+      min-height: 100vh;
+    }
+
+    .site { max-width: 720px; margin: 0 auto; padding: 3rem 1.5rem 5rem; }
+
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 3rem;
+      padding-bottom: 1.25rem;
+      border-bottom: 0.5px solid var(--border);
+      flex-wrap: wrap;
+      gap: 0.75rem;
+    }
+    .back-link {
+      display: inline-flex; align-items: center; gap: 6px;
+      font-family: var(--mono); font-size: 12px;
+      color: var(--muted); text-decoration: none;
+      transition: color 0.15s;
+    }
+    .back-link:hover { color: var(--text); }
+    .back-link svg { width: 14px; height: 14px; }
+    .topbar-brand { font-family: var(--mono); font-size: 12px; color: var(--hint); }
+
+    .post-header { margin-bottom: 2.5rem; }
+    .post-eyebrow {
+      display: inline-flex; align-items: center; gap: 8px;
+      font-family: var(--mono); font-size: 11px;
+      color: var(--green);
+      border: 0.5px solid rgba(63,207,142,0.3);
+      background: var(--green-dim);
+      border-radius: 4px; padding: 4px 10px; margin-bottom: 1rem;
+    }
+    h1 {
+      font-family: var(--sans); font-size: clamp(22px, 4vw, 32px);
+      font-weight: 600; color: var(--text); line-height: 1.25; margin-bottom: 0.75rem;
+    }
+    .post-meta {
+      display: flex; flex-wrap: wrap; gap: 1.25rem;
+      font-family: var(--mono); font-size: 12px; color: var(--muted);
+    }
+
+    .sec-label {
+      display: flex; align-items: center; gap: 10px;
+      font-family: var(--mono); font-size: 11px; color: var(--hint);
+      letter-spacing: 0.1em; text-transform: uppercase;
+      margin: 2rem 0 1rem;
+    }
+    .sec-label::after { content: ''; flex: 1; height: 0.5px; background: var(--border); }
+
+    .achievement-list { list-style: none; display: flex; flex-direction: column; gap: 10px; margin-bottom: 1.5rem; }
+    .achievement-list li {
+      display: flex; align-items: flex-start; gap: 10px;
+      font-size: 14px; color: var(--text); line-height: 1.55;
+    }
+    .ach-icon { width: 16px; height: 16px; color: var(--green); flex-shrink: 0; margin-top: 3px; }
+
+    .prose { font-size: 15px; color: var(--text); line-height: 1.8; }
+    .prose p { margin-bottom: 1.1rem; }
+    .prose h2 {
+      font-family: var(--sans); font-size: 18px; font-weight: 500;
+      color: var(--text); margin: 2rem 0 0.75rem;
+    }
+    .prose h3 {
+      font-family: var(--sans); font-size: 15px; font-weight: 500;
+      color: var(--muted); margin: 1.5rem 0 0.5rem;
+    }
+    .prose code {
+      font-family: var(--mono); font-size: 13px;
+      background: var(--surface2); border: 0.5px solid var(--border2);
+      border-radius: 4px; padding: 2px 6px; color: var(--green);
+    }
+    .prose pre {
+      background: var(--surface); border: 0.5px solid var(--border2);
+      border-radius: 8px; padding: 1.25rem; overflow-x: auto;
+      font-family: var(--mono); font-size: 13px; color: var(--text);
+      margin: 1rem 0 1.5rem; line-height: 1.6;
+    }
+    .prose pre code { background: none; border: none; padding: 0; color: inherit; font-size: inherit; }
+    .prose a { color: var(--blue); text-decoration: none; }
+    .prose a:hover { text-decoration: underline; }
+    .prose ul, .prose ol { padding-left: 1.4rem; margin-bottom: 1rem; }
+    .prose li { margin-bottom: 0.35rem; }
+    .prose blockquote {
+      border-left: 3px solid var(--border2); padding-left: 1rem;
+      color: var(--muted); font-style: italic; margin: 1rem 0;
+    }
+
+    .cards-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 1.5rem; }
+    @media (max-width: 540px) { .cards-row { grid-template-columns: 1fr; } }
+    .mini-card {
+      background: var(--surface); border: 0.5px solid var(--border);
+      border-radius: 10px; padding: 1rem;
+    }
+    .mini-card-label {
+      font-family: var(--mono); font-size: 10px; color: var(--hint);
+      letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 8px;
+    }
+    .mini-card-body { font-size: 13px; color: var(--text); line-height: 1.5; }
+
+    .plan-table {
+      width: 100%; border-collapse: collapse; margin: 1rem 0 1.5rem;
+      font-size: 13px;
+    }
+    .plan-table th {
+      font-family: var(--mono); font-size: 10px; color: var(--hint);
+      letter-spacing: 0.08em; text-transform: uppercase;
+      text-align: left; padding: 0 0.75rem 0.6rem;
+      border-bottom: 0.5px solid var(--border2);
+    }
+    .plan-table td {
+      padding: 0.55rem 0.75rem;
+      border-bottom: 0.5px solid var(--border);
+      color: var(--text); vertical-align: top; line-height: 1.5;
+    }
+    .plan-table tr:last-child td { border-bottom: none; }
+    .plan-table td:first-child {
+      font-family: var(--mono); font-size: 12px;
+      color: var(--muted); white-space: nowrap;
+    }
+    .plan-table td.good { color: var(--green); font-family: var(--mono); font-size: 12px; }
+    .plan-table td.bad  { color: #f87171;      font-family: var(--mono); font-size: 12px; }
+    .plan-table td.mono { font-family: var(--mono); font-size: 12px; }
+
+    .next-week {
+      background: var(--surface); border: 0.5px solid var(--border);
+      border-left: 3px solid var(--amber); border-radius: 10px;
+      padding: 1rem 1.25rem; margin-top: 2rem;
+    }
+    .next-label { font-family: var(--mono); font-size: 11px; color: var(--amber); margin-bottom: 8px; }
+    .next-text { font-size: 14px; color: var(--text); }
+    .next-week code { white-space: nowrap; }
+    .next-list { list-style: none; display: flex; flex-direction: column; gap: 6px; margin-top: 8px; }
+    .next-list li { display: flex; align-items: flex-start; gap: 8px; font-size: 14px; color: var(--text); }
+    .next-list li::before { content: '→'; color: var(--amber); font-family: var(--mono); font-size: 12px; margin-top: 2px; flex-shrink: 0; }
+
+    .post-nav {
+      display: flex; justify-content: space-between; align-items: center;
+      margin-top: 3rem; padding-top: 1.5rem;
+      border-top: 0.5px solid var(--border);
+      flex-wrap: wrap; gap: 1rem;
+    }
+    .nav-link {
+      display: inline-flex; align-items: center; gap: 6px;
+      font-family: var(--mono); font-size: 12px;
+      color: var(--muted); text-decoration: none;
+      transition: color 0.15s;
+    }
+    .nav-link:hover { color: var(--text); }
+    .nav-link svg { width: 14px; height: 14px; }
+    .nav-spacer { flex: 1; }
+
+    footer {
+      border-top: 0.5px solid var(--border);
+      padding-top: 1.5rem; margin-top: 2rem;
+      display: flex; justify-content: space-between; align-items: center;
+      flex-wrap: wrap; gap: 0.75rem;
+    }
+    .footer-left { font-family: var(--mono); font-size: 12px; color: var(--hint); }
+    .footer-right { display: flex; gap: 14px; }
+    .footer-right a {
+      color: var(--hint); text-decoration: none;
+      font-size: 12px; font-family: var(--mono); transition: color 0.15s;
+    }
+    .footer-right a:hover { color: var(--muted); }
+  </style>
+</head>
+<body>
+<div class="site">
+
+  <nav class="topbar">
+    <a class="back-link" href="index.html">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="15 18 9 12 15 6"/></svg>
+      Back to blog
+    </a>
+    <span class="topbar-brand">gsoc-2026 / agl / week-5</span>
+  </nav>
+
+  <header class="post-header">
+    <div class="post-eyebrow">Week 5 · GSoC 2026 · AGL</div>
+    <h1>Week 5 — Building &amp; Booting AGL on RPi4 and RPi5</h1>
+    <div class="post-meta">
+      <span>Jun 23 – Jun 29, 2026</span>
+      <span>Abdulrahman</span>
+    </div>
+  </header>
+
+  <p class="sec-label">This week</p>
+
+  <ul class="achievement-list">
+    <li>
+      <svg class="ach-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="20 6 9 17 4 12"/></svg>
+      <span>Rebuilt <code>agl-ivi-demo-flutter</code> for RPi4 from scratch — diagnosed why the camera was not working in the previously built <code>agl-image-flutter-debug</code> image and switched to the correct image recipe</span>
+    </li>
+    <li>
+      <svg class="ach-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="20 6 9 17 4 12"/></svg>
+      <span>Fixed RPi4 camera support at the build level — added <code>RASPBERRYPI_CAMERA_V2 = "1"</code> to <code>local.conf</code> (adds <code>dtoverlay=imx219</code> to <code>config.txt</code>) and committed <code>PROVIDES += "libcamera"</code> to <code>rpi-libcamera</code> so <code>PREFERRED_PROVIDER_libcamera</code> resolves correctly</span>
+    </li>
+    <li>
+      <svg class="ach-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="20 6 9 17 4 12"/></svg>
+      <span>Built and flashed <code>agl-ivi-demo-flutter-raspberrypi5</code> — debugged first-boot failures caused by two issues in the AGL image configuration</span>
+    </li>
+    <li>
+      <svg class="ach-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="20 6 9 17 4 12"/></svg>
+      <span>Identified root cause of RPi5 boot freeze: <code>kernel_2712.img</code> on the boot partition is U-Boot, which hangs on <code>saveenv</code> on first boot — fixed by setting <code>kernel=Image</code> in <code>config.txt</code> to bypass U-Boot entirely</span>
+    </li>
+    <li>
+      <svg class="ach-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="20 6 9 17 4 12"/></svg>
+      <span>Fixed kernel console output on RPi5 — kernel logs were routed to UART only (<code>console=serial0,115200</code>); added <code>console=tty0</code> so boot messages appear on HDMI</span>
+    </li>
+    <li>
+      <svg class="ach-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="20 6 9 17 4 12"/></svg>
+      <span>Committed both fixes permanently into the AGL BSP layer (<code>meta-agl/meta-agl-bsp/meta-raspberrypi</code>) so future image builds produce correct boot files for RPi5 without manual SD card edits</span>
+    </li>
+    <li>
+      <svg class="ach-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="20 6 9 17 4 12"/></svg>
+      <span>Started work on the seam-stitching algorithm — researching multi-camera image alignment, overlap region detection, and blending strategies to combine the rear-camera feeds into a seamless surround view</span>
+    </li>
+  </ul>
+
+  <p class="sec-label">Details</p>
+
+  <div class="prose">
+
+    <h2>Why the camera was not working — image recipe mismatch</h2>
+    <p>
+      The camera worked in the previously built <code>agl-ivi-demo-flutter</code> image (Jun 25)
+      but not in the newer <code>agl-image-flutter-debug</code> image (Jun 26). Comparing the
+      two image manifests revealed the root cause immediately:
+    </p>
+
+    <table class="plan-table">
+      <thead>
+        <tr>
+          <th>Package</th>
+          <th>agl-ivi-demo-flutter</th>
+          <th>agl-image-flutter-debug</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>rpi-libcamera</td>
+          <td class="good">✓ present</td>
+          <td class="bad">✗ missing</td>
+        </tr>
+        <tr>
+          <td>pipewire-spa-plugins-libcamera</td>
+          <td class="good">✓ present</td>
+          <td class="bad">✗ missing</td>
+        </tr>
+        <tr>
+          <td>pipewire-spa-plugins-v4l2</td>
+          <td class="good">✓ present</td>
+          <td class="bad">✗ missing</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <p>
+      <code>agl-image-flutter-debug</code> is a minimal Flutter development image — it adds
+      SSH, debug packages, and Flutter tooling, but does not pull in the camera stack.
+      <code>agl-ivi-demo-flutter</code> includes <code>camera-gstreamer</code> in its
+      <code>AGL_APPS_INSTALL</code>, which transitively pulls in <code>rpi-libcamera</code>
+      and the PipeWire libcamera SPA plugin. The debug image simply does not include this
+      dependency chain.
+    </p>
+    <p>
+      The correct image for camera work is <code>agl-ivi-demo-flutter</code>. The build
+      was re-triggered with <code>bitbake agl-ivi-demo-flutter</code> after first killing
+      a stuck BitBake server:
+    </p>
+    <pre><code># Kill hung BitBake server
+kill -9 $(cat bitbake.lock)
+rm -f bitbake.lock bitbake.sock
+
+# Rebuild
+bitbake agl-ivi-demo-flutter</code></pre>
+
+    <h2>RPi4 camera fixes — three issues in the build</h2>
+
+    <h3>Fix 1 — Missing dtoverlay for IMX219 (Camera V2)</h3>
+    <p>
+      The <code>config.txt</code> deployed to the SD card had no camera dtoverlay because
+      <code>RASPBERRYPI_CAMERA = "1"</code> (for Camera V1 / OV5647) was never set.
+      Since we use a <strong>Camera V2 (IMX219)</strong>, the correct variable is
+      <code>RASPBERRYPI_CAMERA_V2</code>. Added to <code>raspberrypi4/conf/local.conf</code>:
+    </p>
+    <pre><code># Enable Raspberry Pi Camera V2 (imx219)
+RASPBERRYPI_CAMERA_V2 = "1"</code></pre>
+    <p>
+      The AGL BSP layer's <code>rpi-config_git.bb</code> reads this variable and appends
+      <code>dtoverlay=imx219</code> to <code>config.txt</code> during the deploy task.
+      Without this line the kernel never initialises the camera sensor at boot.
+    </p>
+
+    <h3>Fix 2 — PROVIDES missing from rpi-libcamera recipe</h3>
+    <p>
+      The <code>rpi-default-providers.inc</code> in <code>meta-raspberrypi</code> sets:
+    </p>
+    <pre><code>PREFERRED_PROVIDER_libcamera ?= "rpi-libcamera"
+PACKAGE_EXCLUDE:append = " libcamera"</code></pre>
+    <p>
+      This tells BitBake to use the Raspberry Pi libcamera fork instead of the upstream
+      meta-oe <code>libcamera</code> package. However, this only works if <code>rpi-libcamera</code>
+      actually advertises itself as providing <code>libcamera</code>. The recipe was missing:
+    </p>
+    <pre><code>PROVIDES += "libcamera"</code></pre>
+    <p>
+      Without this line, <code>PREFERRED_PROVIDER_libcamera</code> cannot resolve to
+      <code>rpi-libcamera</code>, the dependency chain breaks, and the libcamera SPA plugin
+      for PipeWire ends up absent from the image. The fix was committed to
+      <code>bsp/meta-raspberrypi/recipes-multimedia/rpi-libcamera/rpi-libcamera_0.5.2+rpt20250903.bb</code>.
+    </p>
+
+    <h2>RPi5 first boot — two issues in the AGL image</h2>
+
+    <h3>Issue 1 — No display output / kernel logs on UART only</h3>
+    <p>
+      After reflashing correctly, the RPi5 booted (green activity LED) but the screen
+      showed nothing after the initial firmware splash. The culprit was <code>cmdline.txt</code>:
+    </p>
+    <pre><code>dwc_otg.lpm_enable=0 console=serial0,115200 root=/dev/mmcblk0p2 ...</code></pre>
+    <p>
+      Only <code>console=serial0,115200</code> was set — all kernel output goes to the
+      UART GPIO pins. There was no <code>console=tty0</code>, so the HDMI display received
+      nothing from the kernel. The firmware splash (red/grey screen) appears before the
+      kernel takes over and is unaffected, which is why that was visible but nothing else was.
+    </p>
+    <p>
+      The fix — add <code>console=tty0</code> to the kernel command line. This was committed
+      permanently to the AGL build via <code>rpi-cmdline.bbappend</code> so all future RPi5
+      images include it automatically.
+    </p>
+
+    <h3>Issue 2 — U-Boot freeze on first boot (root cause)</h3>
+    <p>
+      Even with <code>console=tty0</code> added, the boot sequence froze at the U-Boot
+      logo. Inspecting the boot partition revealed the key:
+    </p>
+    <pre><code>ls /media/abdu/boot/
+  Image          (27 MB  — Linux kernel)
+  kernel_2712.img (680 KB — this is U-Boot, not Linux)</code></pre>
+    <p>
+      The RPi5 firmware (BCM2712 SoC) auto-loads a file named <code>kernel_2712.img</code>
+      by default when no <code>kernel=</code> is specified in <code>config.txt</code>.
+      In the AGL image build, this file is U-Boot — the 680 KB size is the giveaway
+      (a Linux arm64 kernel is always 20–30 MB).
+    </p>
+    <p>
+      U-Boot was freezing because its <code>boot.scr</code> script ran:
+    </p>
+    <pre><code>if test ! -e mmc 0:1 uboot.env; then saveenv; fi</code></pre>
+    <p>
+      On first boot <code>uboot.env</code> does not exist, so U-Boot attempts to write
+      its entire environment to the FAT32 boot partition. This write hangs — most likely
+      a timing or FAT driver issue in U-Boot 2026.01 on the RPi5's RP1 south bridge.
+      From the outside it looks identical to a hard freeze.
+    </p>
+    <p>
+      The fix: tell the RPi5 firmware to load the Linux kernel directly, bypassing U-Boot
+      entirely, by adding <code>kernel=Image</code> to <code>config.txt</code>:
+    </p>
+    <pre><code>echo "kernel=Image" >> /media/abdu/boot/config.txt</code></pre>
+    <p>
+      With this one line, the firmware loads <code>Image</code> (27 MB, Linux kernel),
+      applies the DTB overlays from <code>config.txt</code>, passes <code>cmdline.txt</code>
+      as the kernel command line, and boots directly into Linux. U-Boot is never touched.
+      The RPi5 booted to the AGL homescreen on the next attempt.
+    </p>
+
+    <h2>Build-level fixes committed to meta-agl</h2>
+    <p>
+      Both RPi5 fixes were committed permanently into the AGL BSP layer so they are
+      applied automatically on every future build — no manual SD card edits needed.
+    </p>
+
+    <h3>meta-agl-bsp/meta-raspberrypi/recipes-bsp/bootfiles/rpi-config_git.bbappend</h3>
+    <pre><code>do_deploy:append:raspberrypi5() {
+    # RPi5 firmware auto-loads kernel_2712.img (U-Boot) by default.
+    # U-Boot freezes on first boot (saveenv hang). Boot Linux kernel directly instead.
+    echo "" >> ${DEPLOYDIR}/bootfiles/config.txt
+    echo "# Boot Linux kernel directly, bypassing U-Boot" >> ${DEPLOYDIR}/bootfiles/config.txt
+    echo "kernel=Image" >> ${DEPLOYDIR}/bootfiles/config.txt
+}</code></pre>
+
+    <h3>meta-agl-bsp/meta-raspberrypi/recipes-bsp/bootfiles/rpi-cmdline.bbappend</h3>
+    <pre><code># Show kernel boot logs on HDMI display (not only on UART serial)
+CMDLINE:append:raspberrypi5 = " console=tty0"</code></pre>
+
+
+  </div>
+
+  <p class="sec-label">Challenges &amp; learnings</p>
+
+  <div class="cards-row">
+    <div class="mini-card">
+      <p class="mini-card-label">Challenge</p>
+      <p class="mini-card-body">
+        The RPi5 U-Boot freeze had no visible error — the screen just stopped at the
+        U-Boot logo with no output. The only way to diagnose it was to read the
+        <code>boot.scr</code> source with <code>strings</code>, identify the
+        <code>saveenv</code> call, and cross-reference it with the known first-boot
+        behaviour of U-Boot on FAT partitions. Serial console access would have shown
+        the exact hang point immediately — a USB-UART adapter on the GPIO pins is now
+        on the hardware checklist for all future boards.
+      </p>
+    </div>
+    <div class="mini-card">
+      <p class="mini-card-label">Key learning</p>
+      <p class="mini-card-body">
+        On RPi4/5, <code>kernel_2712.img</code> and <code>u-boot.bin</code> are the
+        same file renamed — the firmware's default kernel name for BCM2712 is how AGL
+        loads U-Boot without a <code>kernel=</code> line. File size is the fastest way
+        to tell them apart: Linux arm64 kernel ≥ 20 MB, U-Boot ≤ 1 MB. When in doubt,
+        <code>file kernel_2712.img</code> will say "U-Boot legacy uImage".
+      </p>
+    </div>
+  </div>
+
+  <div class="next-week">
+    <p class="next-label">Next week →</p>
+    <ul class="next-list">
+      <li><span>Verify that the existing GStreamer camera pipeline code runs correctly on the newly built <code>agl-ivi-demo-flutter</code> image on both RPi4 and RPi5</span></li>
+      <li><span>Continue working on the seam-stitching shader — implement the blending pass and test on overlapping camera frames</span></li>
+    </ul>
+  </div>
+
+  <nav class="post-nav">
+    <a class="nav-link" href="week-4.html">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="15 18 9 12 15 6"/></svg>
+      Week 4
+    </a>
+    <span class="nav-spacer"></span>
+  </nav>
+
+  <footer>
+    <span class="footer-left">© 2026 Abdulrahman · GSoC AGL</span>
+    <div class="footer-right">
+      <a href="https://github.com/Abdulrahman-Yasser" target="_blank">GitHub</a>
+      <a href="https://www.automotivelinux.org/" target="_blank">AGL</a>
+      <a href="index.html">Blog</a>
+    </div>
+  </footer>
+
+</div>
+</body>
+</html>
