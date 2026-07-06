@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Week 6 · GSoC 2026 · AGL Backup Camera</title>
+  <meta name="description" content="Week 6 progress update — diagnosing and fixing the RPi5 U-Boot first-boot hang with a minimal build-time fix." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg:        #0d0f10;
+      --surface:   #141618;
+      --surface2:  #1c1f21;
+      --border:    rgba(255,255,255,0.08);
+      --border2:   rgba(255,255,255,0.14);
+      --text:      #e8e6e0;
+      --muted:     #8a8780;
+      --hint:      #4a4845;
+      --green:     #3fcf8e;
+      --green-dim: rgba(63,207,142,0.12);
+      --amber:     #f5a623;
+      --blue:      #5b9cf6;
+      --blue-dim:  rgba(91,156,246,0.1);
+      --red:       #f87171;
+      --mono: 'IBM Plex Mono', monospace;
+      --sans: 'IBM Plex Sans', sans-serif;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--sans);
+      font-size: 15px;
+      line-height: 1.75;
+      min-height: 100vh;
+    }
+
+    .site { max-width: 720px; margin: 0 auto; padding: 3rem 1.5rem 5rem; }
+
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 3rem;
+      padding-bottom: 1.25rem;
+      border-bottom: 0.5px solid var(--border);
+      flex-wrap: wrap;
+      gap: 0.75rem;
+    }
+    .back-link {
+      display: inline-flex; align-items: center; gap: 6px;
+      font-family: var(--mono); font-size: 12px;
+      color: var(--muted); text-decoration: none;
+      transition: color 0.15s;
+    }
+    .back-link:hover { color: var(--text); }
+    .back-link svg { width: 14px; height: 14px; }
+    .topbar-brand { font-family: var(--mono); font-size: 12px; color: var(--hint); }
+
+    .post-header { margin-bottom: 2.5rem; }
+    .post-eyebrow {
+      display: inline-flex; align-items: center; gap: 8px;
+      font-family: var(--mono); font-size: 11px;
+      color: var(--green);
+      border: 0.5px solid rgba(63,207,142,0.3);
+      background: var(--green-dim);
+      border-radius: 4px; padding: 4px 10px; margin-bottom: 1rem;
+    }
+    h1 {
+      font-family: var(--sans); font-size: clamp(22px, 4vw, 32px);
+      font-weight: 600; color: var(--text); line-height: 1.25; margin-bottom: 0.75rem;
+    }
+    .post-meta {
+      display: flex; flex-wrap: wrap; gap: 1.25rem;
+      font-family: var(--mono); font-size: 12px; color: var(--muted);
+    }
+
+    .sec-label {
+      display: flex; align-items: center; gap: 10px;
+      font-family: var(--mono); font-size: 11px; color: var(--hint);
+      letter-spacing: 0.1em; text-transform: uppercase;
+      margin: 2rem 0 1rem;
+    }
+    .sec-label::after { content: ''; flex: 1; height: 0.5px; background: var(--border); }
+
+    .achievement-list { list-style: none; display: flex; flex-direction: column; gap: 10px; margin-bottom: 1.5rem; }
+    .achievement-list li {
+      display: flex; align-items: flex-start; gap: 10px;
+      font-size: 14px; color: var(--text); line-height: 1.55;
+    }
+    .ach-icon { width: 16px; height: 16px; color: var(--green); flex-shrink: 0; margin-top: 3px; }
+
+    .prose { font-size: 15px; color: var(--text); line-height: 1.8; }
+    .prose p { margin-bottom: 1.1rem; }
+    .prose h2 {
+      font-family: var(--sans); font-size: 18px; font-weight: 500;
+      color: var(--text); margin: 2rem 0 0.75rem;
+    }
+    .prose h3 {
+      font-family: var(--sans); font-size: 15px; font-weight: 500;
+      color: var(--muted); margin: 1.5rem 0 0.5rem;
+    }
+    .prose code {
+      font-family: var(--mono); font-size: 13px;
+      background: var(--surface2); border: 0.5px solid var(--border2);
+      border-radius: 4px; padding: 2px 6px; color: var(--green);
+    }
+    .prose pre {
+      background: var(--surface); border: 0.5px solid var(--border2);
+      border-radius: 8px; padding: 1.25rem; overflow-x: auto;
+      font-family: var(--mono); font-size: 13px; color: var(--text);
+      margin: 1rem 0 1.5rem; line-height: 1.6;
+    }
+    .prose pre code { background: none; border: none; padding: 0; color: inherit; font-size: inherit; }
+    .prose a { color: var(--blue); text-decoration: none; }
+    .prose a:hover { text-decoration: underline; }
+    .prose ul, .prose ol { padding-left: 1.4rem; margin-bottom: 1rem; }
+    .prose li { margin-bottom: 0.35rem; }
+    .prose blockquote {
+      border-left: 3px solid var(--border2); padding-left: 1rem;
+      color: var(--muted); font-style: italic; margin: 1rem 0;
+    }
+
+    .cards-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 1.5rem; }
+    @media (max-width: 540px) { .cards-row { grid-template-columns: 1fr; } }
+    .mini-card {
+      background: var(--surface); border: 0.5px solid var(--border);
+      border-radius: 10px; padding: 1rem;
+    }
+    .mini-card-label {
+      font-family: var(--mono); font-size: 10px; color: var(--hint);
+      letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 8px;
+    }
+    .mini-card-body { font-size: 13px; color: var(--text); line-height: 1.5; }
+
+    .next-week {
+      background: var(--surface); border: 0.5px solid var(--border);
+      border-left: 3px solid var(--amber); border-radius: 10px;
+      padding: 1rem 1.25rem; margin-top: 2rem;
+    }
+    .next-label { font-family: var(--mono); font-size: 11px; color: var(--amber); margin-bottom: 8px; }
+    .next-text { font-size: 14px; color: var(--text); }
+    .next-week code { white-space: nowrap; }
+    .next-list { list-style: none; display: flex; flex-direction: column; gap: 6px; margin-top: 8px; }
+    .next-list li { display: flex; align-items: flex-start; gap: 8px; font-size: 14px; color: var(--text); }
+    .next-list li::before { content: '→'; color: var(--amber); font-family: var(--mono); font-size: 12px; margin-top: 2px; flex-shrink: 0; }
+
+    .post-nav {
+      display: flex; justify-content: space-between; align-items: center;
+      margin-top: 3rem; padding-top: 1.5rem;
+      border-top: 0.5px solid var(--border);
+      flex-wrap: wrap; gap: 1rem;
+    }
+    .nav-link {
+      display: inline-flex; align-items: center; gap: 6px;
+      font-family: var(--mono); font-size: 12px;
+      color: var(--muted); text-decoration: none;
+      transition: color 0.15s;
+    }
+    .nav-link:hover { color: var(--text); }
+    .nav-link svg { width: 14px; height: 14px; }
+    .nav-spacer { flex: 1; }
+
+    footer {
+      border-top: 0.5px solid var(--border);
+      padding-top: 1.5rem; margin-top: 2rem;
+      display: flex; justify-content: space-between; align-items: center;
+      flex-wrap: wrap; gap: 0.75rem;
+    }
+    .footer-left { font-family: var(--mono); font-size: 12px; color: var(--hint); }
+    .footer-right { display: flex; gap: 14px; }
+    .footer-right a {
+      color: var(--hint); text-decoration: none;
+      font-size: 12px; font-family: var(--mono); transition: color 0.15s;
+    }
+    .footer-right a:hover { color: var(--muted); }
+  </style>
+</head>
+<body>
+<div class="site">
+
+  <nav class="topbar">
+    <a class="back-link" href="index.html">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="15 18 9 12 15 6"/></svg>
+      Back to blog
+    </a>
+    <span class="topbar-brand">gsoc-2026 / agl / week-6</span>
+  </nav>
+
+  <header class="post-header">
+    <div class="post-eyebrow">Week 6 · GSoC 2026 · AGL</div>
+    <h1>Week 6 — Fixing the RPi5 U-Boot First-Boot Hang</h1>
+    <div class="post-meta">
+      <span>Jun 30 – Jul 6, 2026</span>
+      <span>Abdulrahman</span>
+    </div>
+  </header>
+
+  <p class="sec-label">This week</p>
+
+  <ul class="achievement-list">
+    <li>
+      <svg class="ach-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="20 6 9 17 4 12"/></svg>
+      <span>Identified the root cause of the RPi5 U-Boot hang: <code>saveenv</code> (FAT write) freezes on first boot because U-Boot's FAT write driver is broken with the RP1 south bridge I/O chip</span>
+    </li>
+    <li>
+      <svg class="ach-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="20 6 9 17 4 12"/></svg>
+      <span>Fixed it with a single build-time addition to <code>rpi-config_git.bbappend</code>: pre-create a valid empty <code>uboot.env</code> so <code>boot.scr</code> never calls <code>saveenv</code> on first boot</span>
+    </li>
+    <li>
+      <svg class="ach-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="20 6 9 17 4 12"/></svg>
+      <span>Confirmed U-Boot 2026.01 can load the 27 MB kernel <code>Image</code> from FAT without issue — the hang was <em>only</em> <code>saveenv</code>, not the kernel load</span>
+    </li>
+    <li>
+      <svg class="ach-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="20 6 9 17 4 12"/></svg>
+      <span>Verified end-to-end: build → flash → first boot → Linux desktop — no manual intervention required</span>
+    </li>
+    <li>
+      <svg class="ach-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="20 6 9 17 4 12"/></svg>
+      <span>Downloaded and ran <a href="https://github.com/neozhaoliang/surround-view-system-introduction">surround-view-system-introduction</a> (neozhaoliang) — a complete Python/OpenCV surround-view pipeline with BEV projection, homography calibration, and multi-camera blending; studied its approach as a reference for the AGL backup camera stitching stage</span>
+    </li>
+  </ul>
+
+  <p class="sec-label">Details</p>
+
+  <div class="prose">
+
+    <h2>Recap: where week 5 left off</h2>
+    <p>
+      Last week the RPi5 booted by adding <code>kernel=Image</code> to <code>config.txt</code>,
+      which tells the BCM2712 firmware to load Linux directly and skip U-Boot entirely. That got
+      the board running, but it is a bypass, not a fix — U-Boot is supposed to be in the boot
+      chain. This week's goal was to understand exactly why U-Boot hangs on first boot and apply
+      the smallest possible fix at the build level.
+    </p>
+
+    <h2>The RP1 south bridge and what it means for U-Boot</h2>
+    <p>
+      The RPi5 introduced an RP1 I/O chip connected to the BCM2712 SoC via PCIe. Almost
+      everything that is not the CPU — SD card, USB, GPIO UART, Ethernet — is routed through RP1.
+      Linux has a full RP1 driver and works perfectly. U-Boot, however, only brings up the drivers
+      it explicitly supports, and its FAT <em>write</em> path over RP1 is broken in 2026.01.
+    </p>
+    <p>
+      This matters because of what happens on the very first boot. The AGL <code>boot.scr</code>
+      contains this guard:
+    </p>
+    <pre><code>if test ! -e mmc 0:1 uboot.env; then saveenv; fi</code></pre>
+    <p>
+      When the board is first flashed, <code>uboot.env</code> does not exist on the FAT partition.
+      So U-Boot calls <code>saveenv</code>, which writes the env block to the FAT partition via
+      the RP1 MMC controller — and hangs indefinitely. The kernel load that follows never happens.
+    </p>
+    <p>
+      Importantly, the FAT <em>read</em> path and the kernel load are both fine. U-Boot 2026.01
+      can <code>fatload</code> the 27 MB <code>Image</code> at full speed — the hang is
+      <em>only</em> the FAT write inside <code>saveenv</code>.
+    </p>
+
+    <h2>The fix — pre-create uboot.env at build time</h2>
+    <p>
+      The <code>boot.scr</code> guard only calls <code>saveenv</code> if <code>uboot.env</code>
+      is absent. The fix is simply to generate a valid env image at Yocto build time and include
+      it in the boot partition, so the file is present from the very first boot and the
+      <code>saveenv</code> call is skipped entirely.
+    </p>
+    <p>
+      A valid U-Boot env image is a 16 kB block: a 4-byte CRC32 over the env content, two null
+      bytes (the empty-env marker), padded to 16 kB with <code>0xFF</code>. Because the env
+      content is just the two null bytes, U-Boot reads this file, finds an empty env, and falls
+      back to its compiled-in defaults for every variable — <code>bootcmd</code>,
+      <code>kernel_addr_r</code>, <code>bootdelay</code>, everything. No variables are lost.
+    </p>
+    <p>
+      This was added to <code>rpi-config_git.bbappend</code> as a single new task:
+    </p>
+    <pre><code>do_deploy:append:raspberrypi5() {
+    python3 -c "
+import struct, zlib, sys
+env = b'\x00\x00' + b'\xff' * (0x4000 - 4 - 2)
+crc = zlib.crc32(env) & 0xFFFFFFFF
+sys.stdout.buffer.write(struct.pack('&lt;I', crc) + env)
+" > ${DEPLOYDIR}/bootfiles/uboot.env
+}</code></pre>
+    <p>
+      The file is placed in <code>DEPLOYDIR/bootfiles/</code>, which is the directory that
+      <code>rpi-config</code> already uses to populate the FAT boot partition in the WIC image.
+      No packaging changes or extra recipes are needed.
+    </p>
+
+    <h2>Confirming the fix with UART</h2>
+    <p>
+      The RPi5 debug UART — the one U-Boot actually uses — is a 3-pin JST SH 1.0mm connector
+      located between the two HDMI ports. It is wired directly to the BCM2712 SoC and is
+      available from the very first U-Boot instruction. The GPIO UART (pins 14/15) goes through
+      RP1, which U-Boot never initialises, so it is silent during the entire U-Boot stage.
+    </p>
+    <p>
+      With a serial adapter connected to the JST SH port, the UART output after the fix shows
+      U-Boot loading <code>boot.scr</code>, detecting that <code>uboot.env</code> exists,
+      skipping <code>saveenv</code>, running <code>fatload</code> for the kernel, and handing
+      off to Linux — first boot, no hang.
+    </p>
+
+  </div>
+
+  <p class="sec-label">Challenges &amp; learnings</p>
+
+  <div class="cards-row">
+    <div class="mini-card">
+      <p class="mini-card-label">Challenge</p>
+      <p class="mini-card-body">
+        No UART output from U-Boot made it hard to pinpoint where the hang occurred without
+        the JST SH connector. Every hypothesis had to be tested by reflashing and watching
+        whether the board reached the Linux desktop or stopped at the U-Boot splash.
+        Once the UART was connected, the culprit — <code>saveenv</code> — was immediately
+        visible in the logs.
+      </p>
+    </div>
+    <div class="mini-card">
+      <p class="mini-card-label">Key learning</p>
+      <p class="mini-card-body">
+        A pre-created env file with a valid CRC but no variables is treated by U-Boot as
+        "env exists, nothing to restore" — all compiled-in defaults remain active. This
+        means the fix is completely transparent to the rest of the boot: no variables need
+        to be duplicated or maintained in the generated file.
+      </p>
+    </div>
+  </div>
+
+  <div class="next-week">
+    <p class="next-label">Next week →</p>
+    <ul class="next-list">
+      <li><span>Study the blending and seam shader algorithms used in <strong>surround-view-system-introduction</strong> (neozhaoliang), <strong>Surround-View</strong> (SokratG), and <strong>libxcam</strong> (Intel) — extract the key BEV projection and overlap blending techniques</span></li>
+      <li><span>Read <strong>Cam2BEV</strong> (ika-rwth-aachen) and the <strong>dairy-farm multi-camera top-down system</strong> (arXiv) to understand learning-based and geometry-based approaches to top-down view synthesis and how they handle seam regions</span></li>
+      <li><span>Survey the <strong>enblend / enfuse</strong> (Hugin toolchain) multi-band blending algorithm — understand how it suppresses seam artifacts and whether a simplified version is feasible in a GLSL/OpenGL ES shader</span></li>
+      <li><span>Verify the GStreamer camera pipeline on the freshly built <code>agl-ivi-demo-flutter</code> image on RPi5</span></li>
+    </ul>
+  </div>
+
+  <nav class="post-nav">
+    <a class="nav-link" href="week-5.html">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="15 18 9 12 15 6"/></svg>
+      Week 5
+    </a>
+    <span class="nav-spacer"></span>
+  </nav>
+
+  <footer>
+    <span class="footer-left">© 2026 Abdulrahman · GSoC AGL</span>
+    <div class="footer-right">
+      <a href="https://github.com/Abdulrahman-Yasser" target="_blank">GitHub</a>
+      <a href="https://www.automotivelinux.org/" target="_blank">AGL</a>
+      <a href="index.html">Blog</a>
+    </div>
+  </footer>
+
+</div>
+</body>
+</html>
