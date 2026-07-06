@@ -269,10 +269,8 @@
     </p>
     <p>
       A valid U-Boot env image is a 16 kB block: a 4-byte CRC32 over the env content, two null
-      bytes (the empty-env marker), padded to 16 kB with <code>0xFF</code>. Because the env
-      content is just the two null bytes, U-Boot reads this file, finds an empty env, and falls
-      back to its compiled-in defaults for every variable — <code>bootcmd</code>,
-      <code>kernel_addr_r</code>, <code>bootdelay</code>, everything. No variables are lost.
+      bytes (the empty-env marker), padded to 16 kB with <code>0xFF</code>. This is the exact
+      binary layout U-Boot expects when reading <code>uboot.env</code> from the FAT partition.
     </p>
     <p>
       This was added to <code>rpi-config_git.bbappend</code> as a single new task:
@@ -291,7 +289,7 @@ sys.stdout.buffer.write(struct.pack('&lt;I', crc) + env)
       No packaging changes or extra recipes are needed.
     </p>
 
-    <h2>Confirming the fix with UART</h2>
+    <h2>The RPi5 debug UART</h2>
     <p>
       The RPi5 debug UART — the one U-Boot actually uses — is a 3-pin JST SH 1.0mm connector
       located between the two HDMI ports. It is wired directly to the BCM2712 SoC and is
@@ -299,10 +297,9 @@ sys.stdout.buffer.write(struct.pack('&lt;I', crc) + env)
       RP1, which U-Boot never initialises, so it is silent during the entire U-Boot stage.
     </p>
     <p>
-      With a serial adapter connected to the JST SH port, the UART output after the fix shows
-      U-Boot loading <code>boot.scr</code>, detecting that <code>uboot.env</code> exists,
-      skipping <code>saveenv</code>, running <code>fatload</code> for the kernel, and handing
-      off to Linux — first boot, no hang.
+      With a serial adapter connected to the JST SH port, the UART output confirmed the hang
+      on first boot without <code>uboot.env</code>, and confirmed a clean boot to Linux with
+      the pre-created <code>uboot.env</code> in place.
     </p>
 
   </div>
@@ -323,10 +320,10 @@ sys.stdout.buffer.write(struct.pack('&lt;I', crc) + env)
     <div class="mini-card">
       <p class="mini-card-label">Key learning</p>
       <p class="mini-card-body">
-        A pre-created env file with a valid CRC but no variables is treated by U-Boot as
-        "env exists, nothing to restore" — all compiled-in defaults remain active. This
-        means the fix is completely transparent to the rest of the boot: no variables need
-        to be duplicated or maintained in the generated file.
+        The RPi5 has two physically separate UARTs. The GPIO header pins (14/15) go through
+        RP1 — silent during U-Boot. The only way to see U-Boot logs is the JST SH 1.0mm
+        connector between the HDMI ports, which is wired directly to the BCM2712 SoC.
+        Without it, there is no way to know where exactly U-Boot hangs.
       </p>
     </div>
   </div>
