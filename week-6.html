@@ -208,15 +208,15 @@
     </li>
     <li>
       <svg class="ach-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="20 6 9 17 4 12"/></svg>
-      <span>Fixed it with a single build-time addition to <code>rpi-config_git.bbappend</code>: pre-create a valid empty <code>uboot.env</code> so <code>boot.scr</code> never calls <code>saveenv</code> on first boot</span>
+      <span>Fixed it with a single build-time addition to <code>rpi-config_git.bbappend</code>: pre-create a <code>uboot.env</code> with a deliberately wrong CRC — U-Boot finds the file (skips <code>saveenv</code>), rejects the bad CRC, and falls back to compiled-in defaults</span>
+    </li>
+    <li>
+      <svg class="ach-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="20 6 9 17 4 12"/></svg>
+      <span>Confirmed via UART: <code>Warning: Bad CRC, using default environment</code> followed by the autoboot countdown and a clean boot to Linux desktop — no hang, first boot</span>
     </li>
     <li>
       <svg class="ach-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="20 6 9 17 4 12"/></svg>
       <span>Confirmed U-Boot 2026.01 can load the 27 MB kernel <code>Image</code> from FAT without issue — the hang was <em>only</em> <code>saveenv</code>, not the kernel load</span>
-    </li>
-    <li>
-      <svg class="ach-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="20 6 9 17 4 12"/></svg>
-      <span>Verified end-to-end: build → flash → first boot → Linux desktop — no manual intervention required</span>
     </li>
     <li>
       <svg class="ach-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="20 6 9 17 4 12"/></svg>
@@ -263,14 +263,33 @@
     <h2>The fix — pre-create uboot.env at build time</h2>
     <p>
       The <code>boot.scr</code> guard only calls <code>saveenv</code> if <code>uboot.env</code>
-      is absent. The fix is simply to generate a valid env image at Yocto build time and include
-      it in the boot partition, so the file is present from the very first boot and the
+      is absent. The fix is to generate a <code>uboot.env</code> file at Yocto build time and
+      include it in the boot partition, so the file is present on first boot and the
       <code>saveenv</code> call is skipped entirely.
     </p>
+    <h3>First attempt — valid empty env</h3>
     <p>
-      A valid U-Boot env image is a 16 kB block: a 4-byte CRC32 over the env content, two null
-      bytes (the empty-env marker), padded to 16 kB with <code>0xFF</code>. This is the exact
-      binary layout U-Boot expects when reading <code>uboot.env</code> from the FAT partition.
+      The first attempt generated a correctly formatted env image: a 4-byte CRC32 header over
+      16380 bytes of content (two null bytes as the empty-env marker, padded to 16 kB with
+      <code>0xFF</code>). U-Boot found the file and the CRC matched — UART showed
+      <code>Loading Environment from FAT... OK</code>. But the board dropped straight to the
+      <code>U-Boot&gt;</code> prompt without autobooting.
+    </p>
+    <p>
+      The reason: a valid persistent env completely <em>replaces</em> the compiled-in defaults.
+      With an empty env, every variable — including <code>bootcmd</code> — was gone.
+    </p>
+    <h3>Final fix — deliberately wrong CRC</h3>
+    <p>
+      The solution is a <code>uboot.env</code> with a deliberately wrong CRC. U-Boot finds the
+      file (the <code>test ! -e</code> existence check passes → <code>saveenv</code> is skipped),
+      then fails the CRC validation and prints:
+    </p>
+    <pre><code>Warning: Bad CRC, using default environment</code></pre>
+    <p>
+      U-Boot then loads its compiled-in defaults — <code>bootcmd</code>, <code>bootdelay</code>,
+      <code>kernel_addr_r</code>, everything — and boots normally. UART confirmed the autoboot
+      countdown followed by a successful kernel load on the very first boot.
     </p>
     <p>
       This was added to <code>rpi-config_git.bbappend</code> as a single new task:
@@ -278,9 +297,9 @@
     <pre><code>do_deploy:append:raspberrypi5() {
     python3 -c "
 import struct, zlib, sys
-env = b'\x00\x00' + b'\xff' * (0x4000 - 4 - 2)
-crc = zlib.crc32(env) & 0xFFFFFFFF
-sys.stdout.buffer.write(struct.pack('&lt;I', crc) + env)
+data = b'\x00' * (0x4000 - 4)
+crc = (zlib.crc32(data) ^ 0xFFFFFFFF) & 0xFFFFFFFF
+sys.stdout.buffer.write(struct.pack('&lt;I', crc) + data)
 " > ${DEPLOYDIR}/bootfiles/uboot.env
 }</code></pre>
     <p>
@@ -298,9 +317,15 @@ sys.stdout.buffer.write(struct.pack('&lt;I', crc) + env)
     </p>
     <p>
       With a serial adapter connected to the JST SH port, the UART output confirmed the hang
-      on first boot without <code>uboot.env</code>, and confirmed a clean boot to Linux with
-      the pre-created <code>uboot.env</code> in place.
+      on first boot without <code>uboot.env</code>. With the fix applied, UART showed:
     </p>
+    <pre><code>Loading Environment from FAT... OK   ← first attempt (valid CRC, empty env)
+U-Boot&gt;                               ← bootcmd gone, dropped to prompt
+
+Warning: Bad CRC, using default environment  ← final fix (wrong CRC)
+Hit any key to stop autoboot: 2              ← compiled-in defaults active
+...
+27656704 bytes read                          ← kernel loaded, booting</code></pre>
 
   </div>
 
@@ -320,10 +345,11 @@ sys.stdout.buffer.write(struct.pack('&lt;I', crc) + env)
     <div class="mini-card">
       <p class="mini-card-label">Key learning</p>
       <p class="mini-card-body">
-        The RPi5 has two physically separate UARTs. The GPIO header pins (14/15) go through
-        RP1 — silent during U-Boot. The only way to see U-Boot logs is the JST SH 1.0mm
-        connector between the HDMI ports, which is wired directly to the BCM2712 SoC.
-        Without it, there is no way to know where exactly U-Boot hangs.
+        A valid persistent <code>uboot.env</code> completely replaces compiled-in defaults —
+        an empty valid env wipes <code>bootcmd</code> and everything else. A file with a wrong
+        CRC is the right approach: U-Boot skips <code>saveenv</code> (file exists) and falls
+        back to compiled-in defaults (CRC fails). The UART message
+        <code>Warning: Bad CRC, using default environment</code> is the expected and correct outcome.
       </p>
     </div>
   </div>
@@ -335,6 +361,7 @@ sys.stdout.buffer.write(struct.pack('&lt;I', crc) + env)
       <li><span>Read <strong>Cam2BEV</strong> (ika-rwth-aachen) and the <strong>dairy-farm multi-camera top-down system</strong> (arXiv) to understand learning-based and geometry-based approaches to top-down view synthesis and how they handle seam regions</span></li>
       <li><span>Survey the <strong>enblend / enfuse</strong> (Hugin toolchain) multi-band blending algorithm — understand how it suppresses seam artifacts and whether a simplified version is feasible in a GLSL/OpenGL ES shader</span></li>
       <li><span>Verify the GStreamer camera pipeline on the freshly built <code>agl-ivi-demo-flutter</code> image on RPi5</span></li>
+      <li><span>Submit a pull request to AGL upstream with the <code>rpi-config_git.bbappend</code> fix for the RPi5 U-Boot first-boot hang</span></li>
     </ul>
   </div>
 
