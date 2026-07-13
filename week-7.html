@@ -199,7 +199,7 @@
 
   <header class="post-header">
     <div class="post-eyebrow">Week 7 · GSoC 2026 · AGL</div>
-    <h1>Week 7 — I am the bug, studying the math behind the scenes, and studying wayland</h1>
+    <h1>Week 7 — I was the bug, studying the math behind the scenes, and reading more about wayland</h1>
     <div class="post-meta">
       <span>Jul 7 – 13, 2026</span>
       <span>Abdulrahman</span>
@@ -212,19 +212,16 @@
   <ul class="achievement-list">
     <li>
       <svg class="ach-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="20 6 9 17 4 12"/></svg>
-      <span>U-boot was fine, the problem was in my charger (sorry about that).</span>
+      <span>U-boot was fine, the problem was in my charger, and wrong sequence of debugging (sorry about that).</span>
     </li>
     <li>
       <svg class="ach-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="20 6 9 17 4 12"/></svg>
-      <span>Derived and implemented the CPU-side IPM (Inverse Perspective Mapping) math in <code>ipm.h</code> / <code>ipm.cpp</code> — <code>build_intrinsics()</code>, an internal <code>build_rotation()</code>, and <code>ground_to_image_H()</code>, which together build a 3×3 homography per camera mapping bird's-eye-view (BEV) canvas pixels directly to camera image coordinates. Pure C++, no OpenCV, no GL — runs once at startup / on parameter change, not per-frame</span>
+      <span>Derived and implemented the CPU-side IPM (Inverse Perspective Mapping) math in <code>ipm.h</code> / <code>ipm.cpp</code> — <code>build_intrinsics()</code>, an internal <code>build_rotation()</code>, and <code>ground_to_image_H()</code>, which together build a 3×3 homography per camera mapping bird's-eye-view (BEV) canvas pixels directly to camera image coordinates. Pure C++, no OpenCV, no GL — runs once at startup / on parameter change, not per-frame.
+        Understanding how the math works (took much of the week time), and implementing the methods in IPM.cpp, and IPM.h</span>
     </li>
     <li>
       <svg class="ach-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="20 6 9 17 4 12"/></svg>
-      <span>Understanding how the math works (took much of the week time), and implementing the methods in IPM.cpp, and IPM.h</span>
-    </li>
-    <li>
-      <svg class="ach-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="20 6 9 17 4 12"/></svg>
-      <span>Reading and studying the wayland protocol and its integration with libcamera, with help of https://github.com/jwinarske/wayland-cxx-scanner/pull/90/changes/9d3560c5da92570a9d4e0275ca39824520805031  </span>
+      <span>Reading and studying the wayland protocol and its integration with libcamera, with help of <a href="https://github.com/jwinarske/wayland-cxx-scanner/pull/90/changes/9d3560c5da92570a9d4e0275ca39824520805031" target="_blank" style="color:var(--blue);text-decoration:none;">wayland-cxx-scanner PR #90</a></span>
     </li>
   </ul>
 
@@ -262,17 +259,6 @@
     <p>
       I tried to understand the math behind the IPM (Inverse Perspective Mapping) and how to implement it in the shader, 
       which took a lot of time, but I think I unerstand it now !
-    </p>
-
-    <h2>Making it works for two cameras (temp)</h2>
-    <p>
-      The dual-file stitching mode from last week already runs — <code>run_dual_file_mode()</code>
-      renders two camera streams side by side with a keyboard-tunable overlap and blend edge. But
-      that stitch is a flat image blend: it doesn't know anything about the ground plane, so it
-      can't produce a true top-down bird's-eye view. For that, the shader needs to answer, for
-      every output pixel on the BEV canvas, "which pixel in the camera image does this piece of
-      ground correspond to?" This week's work builds the math that answers that question, per
-      camera, as a single 3×3 matrix.
     </p>
 
     <h2>One matrix per camera, backward mapping</h2>
@@ -354,36 +340,11 @@ uv = (s.x / s.z, s.y / s.z)   // camera image coordinate, already in [0,1]</code
       <code>OUTSIDE image!</code> in the log instead of a silent black or garbled render on the Pi.
     </p>
 
-    <h2>Flagged for the shader rewrite: the Y-flip</h2>
-    <p>
-      <code>M</code>'s <code>py</code> convention is top-origin, but GLES's
-      <code>gl_FragCoord.y</code> is bottom-origin (<code>y=0</code> at the bottom, increasing
-      upward) — the opposite direction. Feeding <code>gl_FragCoord.y</code> straight into
-      <code>H</code> without correction would put "far" ground at the bottom of the rendered image
-      and invalid/behind-camera territory at the top — backwards from the expected "car near the
-      bottom, road recedes toward the top" BEV look. The fix, confirmed but not yet written, is a
-      single flip in the shader:
-    </p>
-    <pre><code>vec3 p = vec3(gl_FragCoord.x, uBevHeight - gl_FragCoord.y, 1.0);</code></pre>
-    <p>
-      which needs a new <code>uBevHeight</code> uniform set once at <code>init_dual()</code> time.
-    </p>
-
   </div>
 
   <p class="sec-label">Challenges &amp; learnings</p>
 
   <div class="cards-row">
-    <div class="mini-card">
-      <p class="mini-card-label">Challenge</p>
-      <p class="mini-card-body">
-        Two parts of the original task write-up — the <code>inverse()</code> step and the narrow
-        function signature — looked reasonable on paper but would have silently produced a broken
-        or unbuildable result if implemented literally. Working through the actual matrix
-        derivation by hand, rather than trusting the spec at face value, was what surfaced both
-        issues before any GPU code was written.
-      </p>
-    </div>
     <div class="mini-card">
       <p class="mini-card-label">Key learning</p>
       <p class="mini-card-body">
@@ -400,19 +361,9 @@ uv = (s.x / s.z, s.y / s.z)   // camera image coordinate, already in [0,1]</code
   <div class="next-week">
     <p class="next-label">Next week →</p>
     <ul class="next-list">
-      <li><span><strong>Part 2</strong> — wire <code>H_left</code>/<code>H_right</code> into
-        <code>gpu_renderer</code> as <code>uH_L</code>/<code>uH_R</code> uniforms, plus
-        <code>uPxPerM</code>, <code>uBevWidth</code>, <code>uBevHeight</code></span></li>
-      <li><span><strong>Part 3</strong> — rewrite the dual-camera fragment shader to do the
-        per-fragment homography warp: the <code>gl_FragCoord.y</code> flip, <code>okL</code>/<code>okR</code>
-        validity checks, and a smoothstep blend based on world-<code>X</code> instead of the current
-        fixed image-fraction — while keeping the same <code>set_stitch_overlap()</code> /
-        <code>set_blend_edge()</code> API</span></li>
-      <li><span><strong>Part 4</strong> — add <code>--baseline</code>/<code>--h</code>/<code>--pitch</code>/<code>--yaw</code>/<code>--cam-y</code>/<code>--px-per-m</code>
-        CLI flags to <code>main.cpp</code>, call <code>ipm_debug_check()</code> at startup, and add
-        <code>ipm.cpp</code> to <code>CMakeLists.txt</code></span></li>
-      <li><span>Get this running on real RPi4 hardware with both cameras — the CPU math can't be
-        fully validated until pixels actually come out the other end of the shader</span></li>
+      <li><span><strong>Camera calibration</strong> I will take images for the chess board to take the matrix for the camera calibration function</span></li>
+      <li><span><strong>Tunning and lighting for each camera</strong> After the camera calibration, I will tune the brightness, and colors, and for each camera through camshark (as Joel recommended) </span></li>
+      <li><span><strong>Wayland cxx scanner</strong> I've read much of the example at <a href="https://github.com/jwinarske/wayland-cxx-scanner/pull/90/changes/9d3560c5da92570a9d4e0275ca39824520805031" target="_blank" style="color:var(--blue);text-decoration:none;">wayland-cxx-scanner PR #90</a>, and its time to get my output on the window</span></li>
     </ul>
   </div>
 
