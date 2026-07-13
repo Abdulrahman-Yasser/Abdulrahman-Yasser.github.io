@@ -421,7 +421,7 @@
   const TOTAL_WEEKS = 14;
 
   // Weeks you've published — add week numbers here as you go, e.g. [1, 2, 3]
-  const published = [1, 2, 3, 4, 5, 6];
+  const published = [1, 2, 3, 4, 5, 6, 7];
 
   // Milestone weeks (evaluation weeks)
   const milestones = { 7: "Midterm evaluation", 14: "Final evaluation" };
@@ -434,6 +434,7 @@
     4: "Continuous Pipeline, GPU Profiling & Zero-Copy Proof",
     5: "Building & Booting AGL on RPi4 and RPi5",
     6: "Hunting the RPi5 U-Boot Root Cause",
+    7: "Deriving the Ground-Plane Homography for BEV Stitching",
   };
 
   const grid = document.getElementById("weeks-grid");
@@ -460,7 +461,7 @@
       card.href = `week-${w}.html`;
     }
 
-    const title = isMilestone ? milestones[w] : (isDone ? (titles[w] || "Read post →") : "Coming soon");
+    const title = isDone ? (titles[w] || "Read post →") : (isMilestone ? milestones[w] : "Coming soon");
     const statusLabel = isDone ? "✓ published" : isMilestone ? "— evaluation" : "· upcoming";
     const statusCls = isDone ? "done" : isMilestone ? "milestone" : "upcoming";
 
