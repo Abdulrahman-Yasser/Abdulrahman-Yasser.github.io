@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Week 8 · GSoC 2026 · AGL Backup Camera</title>
+  <meta name="description" content="Week 8 progress update — bird's-eye-view stitching in shaders, a live Wayland preview window built on Joel Winarske's wayland-cxx-scanner example, and a real bug found in the live-tunable camera parameters." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg:        #0d0f10;
+      --surface:   #141618;
+      --surface2:  #1c1f21;
+      --border:    rgba(255,255,255,0.08);
+      --border2:   rgba(255,255,255,0.14);
+      --text:      #e8e6e0;
+      --muted:     #8a8780;
+      --hint:      #4a4845;
+      --green:     #3fcf8e;
+      --green-dim: rgba(63,207,142,0.12);
+      --amber:     #f5a623;
+      --blue:      #5b9cf6;
+      --blue-dim:  rgba(91,156,246,0.1);
+      --red:       #f87171;
+      --mono: 'IBM Plex Mono', monospace;
+      --sans: 'IBM Plex Sans', sans-serif;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--sans);
+      font-size: 15px;
+      line-height: 1.75;
+      min-height: 100vh;
+    }
+
+    .site { max-width: 720px; margin: 0 auto; padding: 3rem 1.5rem 5rem; }
+
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 3rem;
+      padding-bottom: 1.25rem;
+      border-bottom: 0.5px solid var(--border);
+      flex-wrap: wrap;
+      gap: 0.75rem;
+    }
+    .back-link {
+      display: inline-flex; align-items: center; gap: 6px;
+      font-family: var(--mono); font-size: 12px;
+      color: var(--muted); text-decoration: none;
+      transition: color 0.15s;
+    }
+    .back-link:hover { color: var(--text); }
+    .back-link svg { width: 14px; height: 14px; }
+    .topbar-brand { font-family: var(--mono); font-size: 12px; color: var(--hint); }
+
+    .post-header { margin-bottom: 2.5rem; }
+    .post-eyebrow {
+      display: inline-flex; align-items: center; gap: 8px;
+      font-family: var(--mono); font-size: 11px;
+      color: var(--green);
+      border: 0.5px solid rgba(63,207,142,0.3);
+      background: var(--green-dim);
+      border-radius: 4px; padding: 4px 10px; margin-bottom: 1rem;
+    }
+    h1 {
+      font-family: var(--sans); font-size: clamp(22px, 4vw, 32px);
+      font-weight: 600; color: var(--text); line-height: 1.25; margin-bottom: 0.75rem;
+    }
+    .post-meta {
+      display: flex; flex-wrap: wrap; gap: 1.25rem;
+      font-family: var(--mono); font-size: 12px; color: var(--muted);
+    }
+
+    .sec-label {
+      display: flex; align-items: center; gap: 10px;
+      font-family: var(--mono); font-size: 11px; color: var(--hint);
+      letter-spacing: 0.1em; text-transform: uppercase;
+      margin: 2rem 0 1rem;
+    }
+    .sec-label::after { content: ''; flex: 1; height: 0.5px; background: var(--border); }
+
+    .achievement-list { list-style: none; display: flex; flex-direction: column; gap: 10px; margin-bottom: 1.5rem; }
+    .achievement-list li {
+      display: flex; align-items: flex-start; gap: 10px;
+      font-size: 14px; color: var(--text); line-height: 1.55;
+    }
+    .ach-icon { width: 16px; height: 16px; color: var(--green); flex-shrink: 0; margin-top: 3px; }
+
+    .prose { font-size: 15px; color: var(--text); line-height: 1.8; }
+    .prose p { margin-bottom: 1.1rem; }
+    .prose h2 {
+      font-family: var(--sans); font-size: 18px; font-weight: 500;
+      color: var(--text); margin: 2rem 0 0.75rem;
+    }
+    .prose h3 {
+      font-family: var(--sans); font-size: 15px; font-weight: 500;
+      color: var(--muted); margin: 1.5rem 0 0.5rem;
+    }
+    .prose code {
+      font-family: var(--mono); font-size: 13px;
+      background: var(--surface2); border: 0.5px solid var(--border2);
+      border-radius: 4px; padding: 2px 6px; color: var(--green);
+    }
+    .prose pre {
+      background: var(--surface); border: 0.5px solid var(--border2);
+      border-radius: 8px; padding: 1.25rem; overflow-x: auto;
+      font-family: var(--mono); font-size: 13px; color: var(--text);
+      margin: 1rem 0 1.5rem; line-height: 1.6;
+    }
+    .prose pre code { background: none; border: none; padding: 0; color: inherit; font-size: inherit; }
+    .prose a { color: var(--blue); text-decoration: none; }
+    .prose a:hover { text-decoration: underline; }
+    .prose ul, .prose ol { padding-left: 1.4rem; margin-bottom: 1rem; }
+    .prose li { margin-bottom: 0.35rem; }
+    .prose blockquote {
+      border-left: 3px solid var(--border2); padding-left: 1rem;
+      color: var(--muted); font-style: italic; margin: 1rem 0;
+    }
+    .prose figure { margin: 1.25rem 0 1.5rem; }
+    .prose figure img,
+    .prose figure video { width: 100%; border-radius: 8px; border: 0.5px solid var(--border2); display: block; }
+    .prose figure figcaption { font-family: var(--mono); font-size: 11px; color: var(--muted); margin-top: 6px; text-align: center; }
+    .media-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin: 1.25rem 0 1.5rem; align-items: start; }
+    .media-row figure { margin: 0; }
+    @media (max-width: 620px) { .media-row { grid-template-columns: 1fr; } }
+
+    .video-note {
+      background: var(--surface); border: 0.5px solid var(--border);
+      border-radius: 10px; margin: 1.25rem 0 1.5rem; overflow: hidden;
+    }
+    .video-note summary {
+      display: flex; align-items: center; gap: 8px;
+      padding: 0.85rem 1.1rem; cursor: pointer; user-select: none;
+      font-family: var(--mono); font-size: 13px; color: var(--text);
+      list-style: none;
+    }
+    .video-note summary::-webkit-details-marker { display: none; }
+    .video-note summary:hover { color: var(--green); }
+    .video-note-arrow { width: 14px; height: 14px; color: var(--muted); flex-shrink: 0; transition: transform 0.2s ease, color 0.2s ease; }
+    .video-note[open] .video-note-arrow { transform: rotate(90deg); color: var(--green); }
+    .video-note video {
+      display: block; width: 100%;
+      border-top: 0.5px solid var(--border);
+    }
+
+    .cards-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 1.5rem; }
+    @media (max-width: 540px) { .cards-row { grid-template-columns: 1fr; } }
+    .mini-card {
+      background: var(--surface); border: 0.5px solid var(--border);
+      border-radius: 10px; padding: 1rem;
+    }
+    .mini-card-label {
+      font-family: var(--mono); font-size: 10px; color: var(--hint);
+      letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 8px;
+    }
+    .mini-card-body { font-size: 13px; color: var(--text); line-height: 1.5; }
+
+    .plan-table {
+      width: 100%; border-collapse: collapse; margin: 1rem 0 1.5rem;
+      font-size: 13px;
+    }
+    .plan-table th {
+      font-family: var(--mono); font-size: 10px; color: var(--hint);
+      letter-spacing: 0.08em; text-transform: uppercase;
+      text-align: left; padding: 0 0.75rem 0.6rem;
+      border-bottom: 0.5px solid var(--border2);
+    }
+    .plan-table td {
+      padding: 0.55rem 0.75rem;
+      border-bottom: 0.5px solid var(--border);
+      color: var(--text); vertical-align: top; line-height: 1.5;
+    }
+    .plan-table tr:last-child td { border-bottom: none; }
+    .plan-table td:first-child {
+      font-family: var(--mono); font-size: 12px;
+      color: var(--muted); white-space: nowrap;
+    }
+    .plan-table td.mono { font-family: var(--mono); font-size: 12px; }
+
+    .next-week {
+      background: var(--surface); border: 0.5px solid var(--border);
+      border-left: 3px solid var(--amber); border-radius: 10px;
+      padding: 1rem 1.25rem; margin-top: 2rem;
+    }
+    .next-label { font-family: var(--mono); font-size: 11px; color: var(--amber); margin-bottom: 8px; }
+    .next-text { font-size: 14px; color: var(--text); }
+    .next-week code { white-space: nowrap; }
+    .next-list { list-style: none; display: flex; flex-direction: column; gap: 6px; margin-top: 8px; }
+    .next-list li { display: flex; align-items: flex-start; gap: 8px; font-size: 14px; color: var(--text); }
+    .next-list li::before { content: '→'; color: var(--amber); font-family: var(--mono); font-size: 12px; margin-top: 2px; flex-shrink: 0; }
+
+    .post-nav {
+      display: flex; justify-content: space-between; align-items: center;
+      margin-top: 3rem; padding-top: 1.5rem;
+      border-top: 0.5px solid var(--border);
+      flex-wrap: wrap; gap: 1rem;
+    }
+    .nav-link {
+      display: inline-flex; align-items: center; gap: 6px;
+      font-family: var(--mono); font-size: 12px;
+      color: var(--muted); text-decoration: none;
+      transition: color 0.15s;
+    }
+    .nav-link:hover { color: var(--text); }
+    .nav-link svg { width: 14px; height: 14px; }
+    .nav-spacer { flex: 1; }
+
+    footer {
+      border-top: 0.5px solid var(--border);
+      padding-top: 1.5rem; margin-top: 2rem;
+      display: flex; justify-content: space-between; align-items: center;
+      flex-wrap: wrap; gap: 0.75rem;
+    }
+    .footer-left { font-family: var(--mono); font-size: 12px; color: var(--hint); }
+    .footer-right { display: flex; gap: 14px; }
+    .footer-right a {
+      color: var(--hint); text-decoration: none;
+      font-size: 12px; font-family: var(--mono); transition: color 0.15s;
+    }
+    .footer-right a:hover { color: var(--muted); }
+  </style>
+</head>
+<body>
+<div class="site">
+
+  <nav class="topbar">
+    <a class="back-link" href="index.html">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="15 18 9 12 15 6"/></svg>
+      Back to blog
+    </a>
+    <span class="topbar-brand">gsoc-2026 / agl / week-8</span>
+  </nav>
+
+  <header class="post-header">
+    <div class="post-eyebrow">Week 8 · GSoC 2026 · AGL</div>
+    <h1>IPM in Shaders, a Live Wayland Preview, and the Case for Per-Camera Parameters</h1>
+    <div class="post-meta">
+      <span>Jul 14 – 20, 2026</span>
+      <span>Abdulrahman</span>
+      <a href="https://github.com/Abdulrahman-Yasser/libcamera-dmabuf-capture/commit/92ed4fd" target="_blank" style="color:var(--blue);text-decoration:none;font-family:var(--mono);font-size:12px;">github: libcamera-dmabuf-capture@92ed4fd</a>
+    </div>
+  </header>
+
+  <p class="sec-label">This week</p>
+
+  <ul class="achievement-list">
+    <li>
+      <svg class="ach-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="20 6 9 17 4 12"/></svg>
+      <span>Took last week's IPM math and actually put it in the shader — replaced the old flat side-by-side composite with a real per-fragment homography warp onto a shared ground plane, so the dual-camera output is finally a true bird's-eye view</span>
+    </li>
+    <li>
+      <svg class="ach-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="20 6 9 17 4 12"/></svg>
+      <span>Used Joel's <code>agl-presentation-egl</code> example from wayland-cxx-scanner PR #90 to finally get the output on a window — a live Wayland preview instead of only saved snapshots, like I said I'd try last week</span>
+    </li>
+    <li>
+      <svg class="ach-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="20 6 9 17 4 12"/></svg>
+      <span>Made camera height, pitch, yaw, and the rest live-tunable with the keyboard while the preview is running — but while testing it I found a real bug: height/pitch/yaw apply to <strong>both</strong> cameras at once, which is wrong. Only the left/right <strong>distance</strong> (the 40 cm baseline) is actually independent per camera right now — the two cameras can be mounted at slightly different heights/angles in real life, and the code doesn't allow for that yet</span>
+    </li>
+    <li>
+      <svg class="ach-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="20 6 9 17 4 12"/></svg>
+      <span>Tested both ways — recorded video files and the live camera feed — and both give a correctly stitched bird's-eye view</span>
+    </li>
+  </ul>
+
+  <p class="sec-label">Details</p>
+
+  <div class="prose">
+
+    <h2>Context</h2>
+    <p>
+      Last week was the math: derive <code>ground_to_image_H()</code>, verify it standalone with a
+      plain <code>g++</code> build, no GPU involved. This week was putting that math where it
+      actually does something — in the shader, on real hardware, watched live instead of guessed
+      at from a saved PNG.
+    </p>
+
+    <h2>Bird's-eye view via shaders</h2>
+    <p>
+      The idea, same as last week: for every pixel of the bird's-eye-view (BEV) output, ask "if
+      there's a real ground point here, where does it show up in the camera image?", then sample
+      there. That's a single 3×3 homography per camera, and now it's actually running — one
+      matrix-vector multiply and a perspective divide, entirely inside the fragment shader:
+    </p>
+    <pre><code>vec3 p  = vec3(gl_FragCoord.xy, 1.0);   // this fragment IS a ground-plane point
+vec3 sL = uH_L * p;                     // project into the left camera
+vec3 sR = uH_R * p;                     // project into the right camera
+vec2 uvL = sL.xy / sL.z;                // perspective divide -> camera uv
+vec2 uvR = sR.xy / sR.z;</code></pre>
+    <p>
+      The two homographies (<code>uH_L</code>, <code>uH_R</code>) are built once on the CPU from
+      camera intrinsics and each camera's position/orientation, then uploaded as uniforms — all the
+      per-pixel GPU work is one matrix-vector multiply and a divide, so there's zero extra CPU cost
+      per frame. Where both cameras see the same ground point, a smoothstep blend across the
+      overlap removes the seam; where neither camera covers a point, it renders black.
+    </p>
+    <p>
+      (The homography-direction bug from last week — <code>H = P*M</code>, not
+      <code>inverse(P*M)</code> — was already caught and fixed before any of this; see last week's
+      post for the full derivation.) Where both cameras see the same ground point, a smoothstep
+      blend across the overlap removes the seam; where neither covers a point, it renders black.
+    </p>
+
+    <h2>Matrix reference: what each variable actually does</h2>
+    <p>
+      Worth writing down precisely, since it's the part that's easiest to get lost in: the whole
+      transform is three small matrices composed into one. Each live-tunable variable lives in
+      exactly one of them.
+    </p>
+    <h3>M — BEV pixel → ground point</h3>
+    <p>Only variable here: <code>px_per_m</code> (ground-sampling density).</p>
+    <pre><code>M = | 1/r_    0     -(bev_w/2)/r_ |
+    | 0      -1/r_   (bev_h/2)/r_ |
+    | 0       0            0      |
+    | 0       0            1      |    (r_ = px_per_m)</code></pre>
+    <h3>R — world → camera rotation</h3>
+    <p>Variables here: <code>pitch</code>, <code>yaw</code>.</p>
+    <pre><code>R = | xcam |   ← right2   (function of yaw only)
+    | ycam |   ← -up2    (function of pitch and yaw)
+    | zcam |   ← fwd2    (function of pitch and yaw)</code></pre>
+    <h3>t — translation (folded into [R|t])</h3>
+    <p>Variables here: <code>cam_x</code> (= ∓baseline/2, left/right only), <code>cam_y</code>, <code>h</code> (camera height).</p>
+    <pre><code>C = (cam_x, cam_y, h)
+t = -R * C</code></pre>
+    <h3>K — intrinsics</h3>
+    <p>Variables here: <code>img_w</code>, <code>img_h</code> — not a tunable key, taken from the decoded frame automatically.</p>
+    <pre><code>K = | fx  0  cx |    fx = fy = 2714.0 * (img_w / 3280.0)
+    | 0  fy  cy |    cx = img_w / 2,  cy = img_h / 2
+    | 0   0   1 |</code></pre>
+    <h3>Final formula</h3>
+    <pre><code>H = K · [R | t] · M</code></pre>
+    <p>
+      computed as <code>P = K·[R|t]</code> then <code>H = P·M</code>, with rows 0/1 of <code>H</code>
+      divided by <code>img_w</code>/<code>img_h</code> so the shader's perspective-divided
+      <code>(u,v)</code> land in <code>[0,1]</code> directly.
+    </p>
+    <table class="plan-table">
+      <tr><th>Variable</th><th>Key(s)</th><th>Matrix</th></tr>
+      <tr><td class="mono">px_per_m</td><td class="mono">M/m</td><td>M</td></tr>
+      <tr><td class="mono">pitch</td><td class="mono">P/p</td><td>R</td></tr>
+      <tr><td class="mono">yaw</td><td class="mono">Y/y</td><td>R</td></tr>
+      <tr><td class="mono">cam_h (h)</td><td class="mono">H/h</td><td>t (via C)</td></tr>
+      <tr><td class="mono">cam_y</td><td class="mono">G/g</td><td>t (via C)</td></tr>
+      <tr><td class="mono">baseline / cam_x</td><td class="mono">B/b</td><td>t (via C), dual mode only</td></tr>
+      <tr><td class="mono">img_w, img_h</td><td class="mono">— (derived)</td><td>K</td></tr>
+    </table>
+
+    <h2>Getting my output on a window, with Joel's help</h2>
+    <p>
+      I said last week it was time to get my output on the window — watching the result only
+      through saved PNG snapshots was slow to iterate on. So this week I added an opt-in live
+      preview window over Wayland, built directly on
+      <a href="https://github.com/jwinarske/wayland-cxx-scanner" target="_blank">Joel's wayland-cxx-scanner</a>,
+      specifically the <code>agl-presentation-egl</code> example from PR #90 — same
+      render-to-texture-then-composite pattern (the FBO's color attachment gets sampled by a
+      full-screen quad pass, since GLES2/3 has no <code>glBlitFramebuffer</code>), same
+      <code>wp_presentation</code> feedback for real commit-to-light latency numbers.
+    </p>
+    <p>
+      Getting it working on the actual AGL compositor surfaced a real upstream issue along the
+      way: the window registers itself as the compositor's persistent <em>background</em> surface
+      via <code>agl_shell.set_background()</code>, and when my app exited,
+      <code>agl-compositor</code> itself crashed — <code>coredumpctl</code> + <code>gdb</code>
+      traced it to a libweston assertion (<code>"empty scene graph at repaint"</code>) in the
+      background-surface teardown path. The protocol has no "unset background" request, so this
+      looks like a genuine upstream gap, not something I can fix from the client side. For now I
+      worked around it: loop the input video on EOS instead of ever letting the process exit,
+      which sidesteps the crash entirely since it only triggers on exit — enough to keep testing
+      productive while a real fix would need to happen upstream.
+    </p>
+
+
+    <figure>
+      <video src="public/images/week8-preview-2.mp4" controls preload="metadata"></video>
+      <figcaption>Live-tunable parameters — adjusting camera height/pitch/yaw while the preview runs</figcaption>
+    </figure>
+
+    <h2>Live-tunable parameters, and a bug I found while using my own tool</h2>
+    <p>
+      Height, pitch, yaw, baseline, forward offset, and ground-sampling scale are all adjustable
+      with dedicated keys while the preview runs, rebuilding and re-uploading the homographies on
+      the fly. Actually sitting there tuning it live is what made a design mistake obvious:
+      height/pitch/yaw all live in one shared parameter set used to build <strong>both</strong>
+      cameras' homographies, differing only in the X offset. That's correct for the baseline
+      itself — the two cameras really are 40 cm apart and that distance is exactly what's modeled
+      — but it's wrong for height/pitch/yaw, which on a real rig can differ slightly per camera
+      just from mounting tolerance. Right now there's no way to nudge only the right camera's
+      pitch half a degree to correct for a slightly crooked mount. That needs independent
+      left/right parameter sets, not one shared set — on the list for next week.
+    </p>
+
+    <h2>Testing — recorded video and the live camera</h2>
+    <p>
+      Verified the full pipeline both ways: against recorded test footage (useful for repeatable,
+      controlled testing of the stitching math itself) and against the live IMX219 camera feed
+      (the real end-to-end path). Both produce a correctly stitched, live-tunable bird's-eye view.
+    </p>
+
+    <h2>Something I've noticed</h2>
+    <p>
+      The rpi5 go to U-boot directly if the debugger is not connected, which is why I thought it was a bug for 2 weeks !. 
+      I don't know if you aware of it or not, so just a side note.
+    </p>
+    <details class="video-note">
+      <summary>
+        <svg class="video-note-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="9 18 15 12 9 6"/></svg>
+        <span>If it's intended, just ignore</span>
+      </summary>
+      <video src="public/images/week8-preview-1.mp4" controls preload="metadata"></video>
+    </details>
+
+  </div>
+
+  <p class="sec-label">Challenges &amp; learnings</p>
+
+  <div class="cards-row">
+    <div class="mini-card">
+      <p class="mini-card-label">Challenge</p>
+      <p class="mini-card-body">
+        The shared-parameters bug wasn't obvious from reading the code — it only became clear by
+        actually using the live-tunable keys while watching the preview and asking "what if the
+        two cameras aren't mounted identically?" A good reminder that interactive testing surfaces
+        design gaps that a code read-through alone doesn't.
+      </p>
+    </div>
+    <div class="mini-card">
+      <p class="mini-card-label">Key learning</p>
+      <p class="mini-card-body">
+        Verify math before it ships, whether that's a standalone unit test for a homography
+        direction or a debugger attached to a live crash. Both the IPM math bug and the
+        compositor crash were caught by getting hard evidence first, not by trusting the first
+        plausible-looking fix.
+      </p>
+    </div>
+  </div>
+
+  <div class="next-week">
+    <p class="next-label">Next week →</p>
+    <ul class="next-list">
+      <li><span>Properly calibrate the cameras to get real intrinsics instead of the scaled estimate (<code>fx = fy = 2714.0 * (img_w / 3280.0)</code>) used for <code>K</code> this week</span></li>
+      <li><span>Record two videos in full sunlight for better lighting, with three large checkerboards laid on the ground, to finish validating the BEV stitching</span></li>
+      <li><span>Start working on the multi-blending algorithm</span></li>
+      <li><span>Give each camera its own independent height/pitch/yaw parameters instead of one shared set — right now the live-tunable keys only adjust one camera/video's parameters at a time, not each independently</span></li>
+    </ul>
+  </div>
+
+  <nav class="post-nav">
+    <a class="nav-link" href="week-7.html">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="15 18 9 12 15 6"/></svg>
+      Week 7
+    </a>
+    <span class="nav-spacer"></span>
+  </nav>
+
+  <footer>
+    <span class="footer-left">© 2026 Abdulrahman · GSoC AGL</span>
+    <div class="footer-right">
+      <a href="https://github.com/Abdulrahman-Yasser" target="_blank">GitHub</a>
+      <a href="https://www.automotivelinux.org/" target="_blank">AGL</a>
+      <a href="index.html">Blog</a>
+    </div>
+  </footer>
+
+</div>
+</body>
+</html>
