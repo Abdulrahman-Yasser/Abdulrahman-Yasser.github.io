@@ -300,12 +300,6 @@ vec2 uvR = sR.xy / sR.z;</code></pre>
       per frame. Where both cameras see the same ground point, a smoothstep blend across the
       overlap removes the seam; where neither camera covers a point, it renders black.
     </p>
-    <p>
-      (The homography-direction bug from last week — <code>H = P*M</code>, not
-      <code>inverse(P*M)</code> — was already caught and fixed before any of this; see last week's
-      post for the full derivation.) Where both cameras see the same ground point, a smoothstep
-      blend across the overlap removes the seam; where neither covers a point, it renders black.
-    </p>
 
     <h2>Matrix reference: what each variable actually does</h2>
     <p>
@@ -375,32 +369,26 @@ t = -R * C</code></pre>
       productive while a real fix would need to happen upstream.
     </p>
 
-
     <figure>
       <video src="public/images/week8-preview-2.mp4" controls preload="metadata"></video>
       <figcaption>Live-tunable parameters — adjusting camera height/pitch/yaw while the preview runs</figcaption>
     </figure>
 
-    <h2>Live-tunable parameters, and a bug I found while using my own tool</h2>
+    <h2>Inspecting camshark</h2>
     <p>
-      Height, pitch, yaw, baseline, forward offset, and ground-sampling scale are all adjustable
-      with dedicated keys while the preview runs, rebuilding and re-uploading the homographies on
-      the fly. Actually sitting there tuning it live is what made a design mistake obvious:
-      height/pitch/yaw all live in one shared parameter set used to build <strong>both</strong>
-      cameras' homographies, differing only in the X offset. That's correct for the baseline
-      itself — the two cameras really are 40 cm apart and that distance is exactly what's modeled
-      — but it's wrong for height/pitch/yaw, which on a real rig can differ slightly per camera
-      just from mounting tolerance. Right now there's no way to nudge only the right camera's
-      pitch half a degree to correct for a slightly crooked mount. That needs independent
-      left/right parameter sets, not one shared set — on the list for next week.
+      Also took a first look at Camshark, the tool <a href="https://github.com/jwinarske" target="_blank">Joel</a>
+      recommended back in week 7 for per-camera tuning. It's a live remote GUI for libcamera
+      controls — connects to the camera process over the network and exposes the same control
+      names used in the pipeline (<code>AeEnable</code>, <code>AwbMode</code>,
+      <code>ColourCorrectionMatrix</code>, <code>ColourGains</code>, <code>ExposureTime</code>,
+      ...), alongside a live histogram and metadata graphs. Just inspected it for now — actually
+      using it to tune brightness/colour per camera is still ahead.
     </p>
+    <figure>
+      <img src="public/images/week8-camshark.png" alt="Camshark GUI showing the live camera feed, libcamera control panel, and RGB histogram" />
+      <figcaption>Camshark connected to the target over the network, live feed + libcamera controls + histogram</figcaption>
+    </figure>
 
-    <h2>Testing — recorded video and the live camera</h2>
-    <p>
-      Verified the full pipeline both ways: against recorded test footage (useful for repeatable,
-      controlled testing of the stitching math itself) and against the live IMX219 camera feed
-      (the real end-to-end path). Both produce a correctly stitched, live-tunable bird's-eye view.
-    </p>
 
     <h2>Something I've noticed</h2>
     <p>
@@ -417,28 +405,7 @@ t = -R * C</code></pre>
 
   </div>
 
-  <p class="sec-label">Challenges &amp; learnings</p>
 
-  <div class="cards-row">
-    <div class="mini-card">
-      <p class="mini-card-label">Challenge</p>
-      <p class="mini-card-body">
-        The shared-parameters bug wasn't obvious from reading the code — it only became clear by
-        actually using the live-tunable keys while watching the preview and asking "what if the
-        two cameras aren't mounted identically?" A good reminder that interactive testing surfaces
-        design gaps that a code read-through alone doesn't.
-      </p>
-    </div>
-    <div class="mini-card">
-      <p class="mini-card-label">Key learning</p>
-      <p class="mini-card-body">
-        Verify math before it ships, whether that's a standalone unit test for a homography
-        direction or a debugger attached to a live crash. Both the IPM math bug and the
-        compositor crash were caught by getting hard evidence first, not by trusting the first
-        plausible-looking fix.
-      </p>
-    </div>
-  </div>
 
   <div class="next-week">
     <p class="next-label">Next week →</p>
