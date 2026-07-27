@@ -240,8 +240,7 @@
 
   <header class="post-header">
     <div class="post-eyebrow">Week 9 · GSoC 2026 · AGL</div>
-    <!-- EDIT: Replace with the actual week title -->
-    <h1>Week 9 — CALIBRTION WEEK</h1>
+    <h1>From Checkerboard to ChArUco: Real Intrinsics and Independent Camera Parameters</h1>
     <div class="post-meta">
       <!-- EDIT: Update the date -->
       <span>Month DD – Month DD, 2026</span>
@@ -266,7 +265,7 @@
     </li>
     <li>
       <svg class="ach-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="20 6 9 17 4 12"/></svg>
-      <span>Give each camera its own independent height/pitch/yaw parameters instead of one shared set — right now the live-tunable keys only adjust one camera/video's parameters at a time, not each independently</span>
+      <span>Gave each of the 4 cameras its own independent height/pitch/yaw parameters </span>
     </li>
   </ul>
 
@@ -310,13 +309,61 @@
     </p>
 
     <h2>Results</h2>
-    <!-- EDIT: add calibration result images here -->
-    <!-- EDIT: add video output here -->
+    <p>
+      Ran the calibration twice on different batches of the plain checkerboard, then again with the
+      ChArUco board. RMS reprojection error (lower is better — under ~0.5 px is good, over ~1.0 px
+      usually means bad detections crept into the batch):
+    </p>
 
-    <h2>Wayland preview: up to 8 videos</h2>
+    <h3>Standard checkerboard — batch 1</h3>
+    <pre><code>cam0: 48 views  |  RMS = 0.6820 px  |  image_size = (1640, 1232)
+K = [[1312.291    0.     819.424]
+     [   0.    1314.646  653.306]
+     [   0.       0.       1.   ]]
+dist = [ 0.20202 -0.40086 -0.00005 -0.0036   0.14008]
+
+cam1: 43 views  |  RMS = 0.5335 px  |  image_size = (1640, 1232)
+K = [[1306.357    0.     820.094]
+     [   0.    1309.278  638.307]
+     [   0.       0.       1.   ]]
+dist = [ 0.18043 -0.23094 -0.00032 -0.00123 -0.14996]</code></pre>
+
+    <h3>Standard checkerboard — batch 2</h3>
+    <pre><code>cam1: 33 views  |  RMS = 0.8972 px  |  image_size = (1640, 1232)
+K = [[1245.884    0.     820.162]
+     [   0.    1246.833  645.524]
+     [   0.       0.       1.   ]]
+dist = [ 0.1574  -0.35494  0.00279 -0.00183  0.21273]
+
+cam0: 24 views  |  RMS = 0.8871 px  |  image_size = (1640, 1232)
+K = [[1252.168    0.     827.118]
+     [   0.    1254.091  674.283]
+     [   0.       0.       1.   ]]
+dist = [ 0.13358 -0.17607  0.00729 -0.00214 -0.2114 ]</code></pre>
+
+    <h3>ChArUco board</h3>
+    <pre><code>cam0: 27 views  |  RMS = 0.4298 px  |  image_size = (1640, 1232)
+K = [[1261.398    0.     842.395]
+     [   0.    1262.453  658.369]
+     [   0.       0.       1.   ]]
+dist = [ 0.15907 -0.30106  0.00058  0.00402 -0.08112]
+
+cam1: 18 views  |  RMS = 0.4051 px  |  image_size = (1640, 1232)
+K = [[1258.549    0.     837.462]
+     [   0.    1258.419  638.641]
+     [   0.       0.       1.   ]]
+dist = [ 0.17347 -0.36217 -0.0015   0.00445  0.1823 ]</code></pre>
+    <p>
+      The ChArUco runs used fewer views (27 and 18, vs. 48/43/33/24) and still landed a noticeably
+      lower RMS — 0.43 px and 0.41 px, both comfortably under the "good" threshold, versus the
+      0.53–0.90 px spread from the plain checkerboard batches.
+    </p>
+    <!-- EDIT: add calibration result images here -->
+
+    <h2>Wayland preview: up to 4 videos</h2>
     <p>
       Also extended last week's Wayland preview code, which only handled two cameras, to accept up to
-      8 videos at once. Each video now has its own independently editable
+      4 videos at once. Each video now has its own independently editable
       <code>position</code>/<code>height</code>/<code>pitch</code>/<code>yaw</code>/<code>pixel_per_m</code>
       and the rest of the live-tunable parameters, instead of one shared set for the whole preview.
     </p>
@@ -324,8 +371,11 @@
 
   <div class="next-week">
     <p class="next-label">Next week →</p>
-    <!-- EDIT: What's the plan for next week? -->
-    <p class="next-text">Brief description of what you plan to work on next.</p>
+    <ul class="next-list">
+      <li><span>Keep recording videos with the ChArUco board to properly cover the shared ground area between cameras</span></li>
+      <li><span>Start working with Flutter, getting the stitched output into <code>agl-flutter-imag</code></span></li>
+      <li><span>Check other BEV algorithms to see if something works better than the current homography-based stitching</span></li>
+    </ul>
   </div>
 
   <nav class="post-nav">
