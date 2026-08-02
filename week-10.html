@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Week 10 · GSoC 2026 · AGL Backup Camera</title>
+  <meta name="description" content="Week 10 progress update — GSoC 2026 AI-enabled Backup Camera, AGL." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg:        #0d0f10;
+      --surface:   #141618;
+      --surface2:  #1c1f21;
+      --border:    rgba(255,255,255,0.08);
+      --border2:   rgba(255,255,255,0.14);
+      --text:      #e8e6e0;
+      --muted:     #8a8780;
+      --hint:      #4a4845;
+      --green:     #3fcf8e;
+      --green-dim: rgba(63,207,142,0.12);
+      --amber:     #f5a623;
+      --blue:      #5b9cf6;
+      --blue-dim:  rgba(91,156,246,0.1);
+      --red:       #f87171;
+      --mono: 'IBM Plex Mono', monospace;
+      --sans: 'IBM Plex Sans', sans-serif;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--sans);
+      font-size: 15px;
+      line-height: 1.75;
+      min-height: 100vh;
+    }
+
+    .site { max-width: 720px; margin: 0 auto; padding: 3rem 1.5rem 5rem; }
+
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 3rem;
+      padding-bottom: 1.25rem;
+      border-bottom: 0.5px solid var(--border);
+      flex-wrap: wrap;
+      gap: 0.75rem;
+    }
+    .back-link {
+      display: inline-flex; align-items: center; gap: 6px;
+      font-family: var(--mono); font-size: 12px;
+      color: var(--muted); text-decoration: none;
+      transition: color 0.15s;
+    }
+    .back-link:hover { color: var(--text); }
+    .back-link svg { width: 14px; height: 14px; }
+    .topbar-brand { font-family: var(--mono); font-size: 12px; color: var(--hint); }
+
+    .post-header { margin-bottom: 2.5rem; }
+    .post-eyebrow {
+      display: inline-flex; align-items: center; gap: 8px;
+      font-family: var(--mono); font-size: 11px;
+      color: var(--green);
+      border: 0.5px solid rgba(63,207,142,0.3);
+      background: var(--green-dim);
+      border-radius: 4px; padding: 4px 10px; margin-bottom: 1rem;
+    }
+    h1 {
+      font-family: var(--sans); font-size: clamp(22px, 4vw, 32px);
+      font-weight: 600; color: var(--text); line-height: 1.25; margin-bottom: 0.75rem;
+    }
+    .post-meta {
+      display: flex; flex-wrap: wrap; gap: 1.25rem;
+      font-family: var(--mono); font-size: 12px; color: var(--muted);
+    }
+
+    .sec-label {
+      display: flex; align-items: center; gap: 10px;
+      font-family: var(--mono); font-size: 11px; color: var(--hint);
+      letter-spacing: 0.1em; text-transform: uppercase;
+      margin: 2rem 0 1rem;
+    }
+    .sec-label::after { content: ''; flex: 1; height: 0.5px; background: var(--border); }
+
+    .achievement-list { list-style: none; display: flex; flex-direction: column; gap: 10px; margin-bottom: 1.5rem; }
+    .achievement-list li {
+      display: flex; align-items: flex-start; gap: 10px;
+      font-size: 14px; color: var(--text); line-height: 1.55;
+    }
+    .ach-icon { width: 16px; height: 16px; color: var(--green); flex-shrink: 0; margin-top: 3px; }
+
+    .prose { font-size: 15px; color: var(--text); line-height: 1.8; }
+    .prose p { margin-bottom: 1.1rem; }
+    .prose h2 {
+      font-family: var(--sans); font-size: 18px; font-weight: 500;
+      color: var(--text); margin: 2rem 0 0.75rem;
+    }
+    .prose h3 {
+      font-family: var(--sans); font-size: 15px; font-weight: 500;
+      color: var(--muted); margin: 1.5rem 0 0.5rem;
+    }
+    .prose code {
+      font-family: var(--mono); font-size: 13px;
+      background: var(--surface2); border: 0.5px solid var(--border2);
+      border-radius: 4px; padding: 2px 6px; color: var(--green);
+    }
+    .prose pre {
+      background: var(--surface); border: 0.5px solid var(--border2);
+      border-radius: 8px; padding: 1.25rem; overflow-x: auto;
+      font-family: var(--mono); font-size: 13px; color: var(--text);
+      margin: 1rem 0 1.5rem; line-height: 1.6;
+    }
+    .prose pre code { background: none; border: none; padding: 0; color: inherit; font-size: inherit; }
+    .prose a { color: var(--blue); text-decoration: none; }
+    .prose a:hover { text-decoration: underline; }
+    .prose ul, .prose ol { padding-left: 1.4rem; margin-bottom: 1rem; }
+    .prose li { margin-bottom: 0.35rem; }
+    .prose blockquote {
+      border-left: 3px solid var(--border2); padding-left: 1rem;
+      color: var(--muted); font-style: italic; margin: 1rem 0;
+    }
+    .prose figure { margin: 1.25rem 0 1.5rem; }
+    .prose figure img,
+    .prose figure video { width: 100%; border-radius: 8px; border: 0.5px solid var(--border2); display: block; }
+    .prose figure figcaption { font-family: var(--mono); font-size: 11px; color: var(--muted); margin-top: 6px; text-align: center; }
+    .media-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin: 1.25rem 0 1.5rem; align-items: start; }
+    .media-row figure { margin: 0; }
+    @media (max-width: 620px) { .media-row { grid-template-columns: 1fr; } }
+
+    .video-note {
+      background: var(--surface); border: 0.5px solid var(--border);
+      border-radius: 10px; margin: 1.25rem 0 1.5rem; overflow: hidden;
+    }
+    .video-note summary {
+      display: flex; align-items: center; gap: 8px;
+      padding: 0.85rem 1.1rem; cursor: pointer; user-select: none;
+      font-family: var(--mono); font-size: 13px; color: var(--text);
+      list-style: none;
+    }
+    .video-note summary::-webkit-details-marker { display: none; }
+    .video-note summary:hover { color: var(--green); }
+    .video-note-arrow { width: 14px; height: 14px; color: var(--muted); flex-shrink: 0; transition: transform 0.2s ease, color 0.2s ease; }
+    .video-note[open] .video-note-arrow { transform: rotate(90deg); color: var(--green); }
+    .video-note video {
+      display: block; width: 100%;
+      border-top: 0.5px solid var(--border);
+    }
+
+    .cards-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 1.5rem; }
+    @media (max-width: 540px) { .cards-row { grid-template-columns: 1fr; } }
+    .mini-card {
+      background: var(--surface); border: 0.5px solid var(--border);
+      border-radius: 10px; padding: 1rem;
+    }
+    .mini-card-label {
+      font-family: var(--mono); font-size: 10px; color: var(--hint);
+      letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 8px;
+    }
+    .mini-card-body { font-size: 13px; color: var(--text); line-height: 1.5; }
+
+    .plan-table {
+      width: 100%; border-collapse: collapse; margin: 1rem 0 1.5rem;
+      font-size: 13px;
+    }
+    .plan-table th {
+      font-family: var(--mono); font-size: 10px; color: var(--hint);
+      letter-spacing: 0.08em; text-transform: uppercase;
+      text-align: left; padding: 0 0.75rem 0.6rem;
+      border-bottom: 0.5px solid var(--border2);
+    }
+    .plan-table td {
+      padding: 0.55rem 0.75rem;
+      border-bottom: 0.5px solid var(--border);
+      color: var(--text); vertical-align: top; line-height: 1.5;
+    }
+    .plan-table tr:last-child td { border-bottom: none; }
+    .plan-table td:first-child {
+      font-family: var(--mono); font-size: 12px;
+      color: var(--muted); white-space: nowrap;
+    }
+    .plan-table td.mono { font-family: var(--mono); font-size: 12px; }
+
+    .next-week {
+      background: var(--surface); border: 0.5px solid var(--border);
+      border-left: 3px solid var(--amber); border-radius: 10px;
+      padding: 1rem 1.25rem; margin-top: 2rem;
+    }
+    .next-label { font-family: var(--mono); font-size: 11px; color: var(--amber); margin-bottom: 8px; }
+    .next-text { font-size: 14px; color: var(--text); }
+    .next-week code { white-space: nowrap; }
+    .next-list { list-style: none; display: flex; flex-direction: column; gap: 6px; margin-top: 8px; }
+    .next-list li { display: flex; align-items: flex-start; gap: 8px; font-size: 14px; color: var(--text); }
+    .next-list li::before { content: '→'; color: var(--amber); font-family: var(--mono); font-size: 12px; margin-top: 2px; flex-shrink: 0; }
+
+    .post-nav {
+      display: flex; justify-content: space-between; align-items: center;
+      margin-top: 3rem; padding-top: 1.5rem;
+      border-top: 0.5px solid var(--border);
+      flex-wrap: wrap; gap: 1rem;
+    }
+    .nav-link {
+      display: inline-flex; align-items: center; gap: 6px;
+      font-family: var(--mono); font-size: 12px;
+      color: var(--muted); text-decoration: none;
+      transition: color 0.15s;
+    }
+    .nav-link:hover { color: var(--text); }
+    .nav-link svg { width: 14px; height: 14px; }
+    .nav-spacer { flex: 1; }
+
+    footer {
+      border-top: 0.5px solid var(--border);
+      padding-top: 1.5rem; margin-top: 2rem;
+      display: flex; justify-content: space-between; align-items: center;
+      flex-wrap: wrap; gap: 0.75rem;
+    }
+    .footer-left { font-family: var(--mono); font-size: 12px; color: var(--hint); }
+    .footer-right { display: flex; gap: 14px; }
+    .footer-right a {
+      color: var(--hint); text-decoration: none;
+      font-size: 12px; font-family: var(--mono); transition: color 0.15s;
+    }
+    .footer-right a:hover { color: var(--muted); }
+  </style>
+</head>
+<body>
+<div class="site">
+
+  <nav class="topbar">
+    <a class="back-link" href="index.html">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="15 18 9 12 15 6"/></svg>
+      Back to blog
+    </a>
+    <span class="topbar-brand">gsoc-2026 / agl / week-10</span>
+  </nav>
+
+  <header class="post-header">
+    <div class="post-eyebrow">Week 10 · GSoC 2026 · AGL</div>
+    <h1>Time to use CharArUco calibration, Street Captures, and a blending algorithms</h1>
+    <div class="post-meta">
+      <span>Jul 28 – Aug 3, 2026</span>
+      <span>Abdulrahman</span>
+    </div>
+  </header>
+
+  <p class="sec-label">This week</p>
+
+  <ul class="achievement-list">
+    <li>
+      <svg class="ach-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="20 6 9 17 4 12"/></svg>
+      <span>Wrote a bash script to record video and capture a still image from the RPi 5 cameras in one pass, to make it easier and faster in the car</span>
+    </li>
+    <li>
+      <svg class="ach-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="20 6 9 17 4 12"/></svg>
+      <span>Recorded several ChArUco-board videos with the RPi camera mounted on the car out on the street, for calibration data from real driving experiment</span>
+    </li>
+    <li>
+      <svg class="ach-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="20 6 9 17 4 12"/></svg>
+      <span>Built a calibration script that computes the 3×3 board-to-image homography matrix each BEV shader needs to warp its camera view onto the shared ground plane</span>
+    </li>
+    <li>
+      <svg class="ach-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="20 6 9 17 4 12"/></svg>
+      <span>Wrote a separate script to compute each camera lens's intrinsic matrix (focal length, distortion) from a batch of ChArUco photos</span>
+    </li>
+    <li>
+      <svg class="ach-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="20 6 9 17 4 12"/></svg>
+      <span>Tried printing the ChArUco board onto thin wood and cardboard backings, both warped too much for reliable corner detection (didn't expect that putting a paper on wood would be that hard), so next up is ordering rigid MDF board (smaller than A4 size) to mount the paper on instead</span>
+    </li>
+    <li>
+      <svg class="ach-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="20 6 9 17 4 12"/></svg>
+      <span>Made the shader's live-tunable variables persist to a <code>bev-config.ini</code> file — the app reads its parameters from that file on startup, and pressing <code>W</code> overwrites it with whatever values are currently set</span>
+    </li>
+    <li>
+      <svg class="ach-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="20 6 9 17 4 12"/></svg>
+      <span>Implemented two blend modes for stitching the multi-camera BEV output — a single-pass angular-weighted feather blend, and a multi-band Laplacian pyramid blend for smoother transitions across camera overlaps</span>
+    </li>
+  </ul>
+
+  <p class="sec-label">Details</p>
+
+  <div class="prose">
+
+    <h2>Context</h2>
+    <p>
+      Week 9 ended on the ChArUco board fixing the intrinsic calibration and the "normal checkerboard has to be
+      fully visible in both cameras" problem in theory. This week, I've used ChArUco, and it solved all of my problems !!!!!
+    </p>
+
+
+    <h2>Capturing on the street, not the desk</h2>
+    <p>
+      I wrote a small bash script that records video and grabs a still image from the RPi 5 cameras in one pass, then took the camera out on the
+      street with the ChArUco board and recorded several passes for real calibration data.
+    </p>
+        <h3>Car-driving capture. still + video from both cameras</h3>
+    <pre><code>W=1640            
+H=1232
+SETTLE=2000       
+DUR=30000         
+
+SESSION="captures/$(date +%Y%m%d_%H%M%S)"
+mkdir -p "$SESSION"
+
+rpicam-still --camera 0 --width $W --height $H -t $SETTLE --nopreview -o "$SESSION/camA.png" &amp;
+rpicam-still --camera 1 --width $W --height $H -t $SETTLE --nopreview -o "$SESSION/camB.png" &amp;
+wait
+
+rpicam-vid --camera 0 --codec mjpeg --width $W --height $H -t $DUR --nopreview -o "$SESSION/camA.mjpeg" &amp;
+rpicam-vid --camera 1 --codec mjpeg --width $W --height $H -t $DUR --nopreview -o "$SESSION/camB.mjpeg" &amp;
+wait
+
+ln -sf "$SESSION/camA.png" camA.png
+ln -sf "$SESSION/camB.png" camB.png
+echo "-> saved in $SESSION/  (stills camA.png/camB.png + video camA.mjpeg/camB.mjpeg)"</code></pre>
+
+    <div class="media-row">
+      <figure>
+        <img src="public/images/week-10-front/camB-web.jpg" alt="Still frame captured from the front-left camera" />
+        <figcaption>Front-left</figcaption>
+      </figure>
+      <figure>
+        <img src="public/images/week-10-front/camA-web.jpg" alt="Still frame captured from the front-right camera" />
+        <figcaption>Front-right</figcaption>
+      </figure>
+      <figure>
+        <img src="public/images/week-10-back/back-camB-web.jpg" alt="Still frame captured from the back-left camera" />
+        <figcaption>Back-left</figcaption>
+      </figure>
+      <figure>
+        <img src="public/images/week-10-back/back-camA-web.jpg" alt="Still frame captured from the back-right camera" />
+        <figcaption>Back-right</figcaption>
+      </figure>
+    </div>
+    <figure>
+      <video src="public/images/week-10-rpi-running.mp4" controls preload="metadata"></video>
+      <figcaption>The rig running live on the Pi</figcaption>
+    </figure>
+    <details class="video-note">
+      <summary>
+        <svg class="video-note-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="9 18 15 12 9 6"/></svg>
+        <span>Raw ChArUco footage from all four cameras</span>
+      </summary>
+      <div class="media-row">
+        <figure>
+          <video src="public/images/week-10-front/camA-web.mp4" controls preload="metadata"></video>
+          <figcaption>Front-left</figcaption>
+        </figure>
+        <figure>
+          <video src="public/images/week-10-front/camB-web.mp4" controls preload="metadata"></video>
+          <figcaption>Front-right</figcaption>
+        </figure>
+        <figure>
+          <video src="public/images/week-10-back/back-camA-web.mp4" controls preload="metadata"></video>
+          <figcaption>Back-left</figcaption>
+        </figure>
+        <figure>
+          <video src="public/images/week-10-back/back-camB-web.mp4" controls preload="metadata"></video>
+          <figcaption>Back-right</figcaption>
+        </figure>
+      </div>
+    </details>
+
+    <h2>Two calibration scripts</h2>
+    <p>
+      Split the calibration into two separate scripts, since they solve for different things from
+      different shots:
+    </p>
+    <ul>
+      <li><strong>Intrinsics</strong> — takes a batch of ChArUco photos from a single camera and solves
+      for that lens's focal length, principal point, and distortion coefficients.</li>
+      <li><strong>Homography</strong> — takes one shot of the ChArUco board laid flat on the shared
+      ground between two cameras and computes the 3×3 board-to-image homography matrix each BEV
+      shader needs to warp its view onto that ground plane.</li>
+    </ul>
+    <p>
+      The homography script also renders two verification images per pair, so a bad calibration is
+      obvious to reshoot the board again before anything. Then it automatically generates a bev-config.ini with the new bev values, s we don't 
+      have to change the source code just for changing variables.
+    </p>
+    <div class="media-row">
+      <figure>
+        <img src="public/images/week-10-front/calib_f_20260623_101633_blend-web.jpg" alt="Blended BEV overlay of the front camera pair" />
+        <figcaption>Front pair — blended overlay</figcaption>
+      </figure>
+      <figure>
+        <img src="public/images/week-10-front/calib_f_20260623_101633_sep-web.jpg" alt="Side-by-side BEV comparison of the front camera pair" />
+        <figcaption>Front pair — side by side</figcaption>
+      </figure>
+      <figure>
+        <img src="public/images/week-10-back/calib_f_20260623_103652_blend-web.jpg" alt="Blended BEV overlay of the back camera pair" />
+        <figcaption>Back pair — blended overlay</figcaption>
+      </figure>
+      <figure>
+        <img src="public/images/week-10-back/calib_f_20260623_103652_sep-web.jpg" alt="Side-by-side BEV comparison of the back camera pair" />
+        <figcaption>Back pair — side by side</figcaption>
+      </figure>
+    </div>
+
+    <h3>Still the same IPM, just measured instead of modeled</h3>
+    <p>
+      Worth being precise about what actually changed here: calibrating <code>hb2i</code> didn't replace
+      the IPM approach with something else, the shader is still backward-sampling through the same
+      <code>s·[u,v,1]ᵀ = H·[X,Y,1]ᵀ</code> ground-plane homography it always was. What changed is where
+      <code>H</code>'s numbers come from. Before, <code>H</code> was built from a model —
+      <code>K·[R|t]</code>, computed from hand-tuned guesses for the camera's height, pitch, and yaw. Now
+      it's measured directly from a real photo of the ChArUco board on the ground, so it can't be wrong
+      just because I mismeasured how the camera is actually mounted. Same algorithm, more trustworthy
+      numbers feeding it.
+    </p>
+
+    <h2>Shader parameters</h2>
+    <p>
+      Until now, every live-tunable shader variable (height, pitch, yaw, pixel_per_m, per camera) reset
+      to hardcoded defaults on every run, so I was re-tuning by hand each time. Now the shader reads its
+      parameters from a <code>bev-config.ini</code> file on startup, and pressing <code>W</code> while
+      the preview is running overwrites that file with whatever values are currently set. Tuning is now
+      cumulative across runs instead of starting from scratch each time.
+    </p>
+
+    <h2>Two blend modes for the seams</h2>
+    <p>
+      With multiple cameras now stitched into one BEV output, the overlap regions needed actual
+      blending instead of a hard cut. Implemented two approaches to compare:
+    </p>
+    <ul>
+      <li><strong>Angular-weighted feather blend</strong> — single pass, weights each camera's
+      contribution in the overlap by how close the pixel is to that camera's center vs. the seam.
+      Cheap, but can leave a visible gradient if the two views don't agree closely on color/exposure.</li>
+      <li><strong>Multi-band Laplacian pyramid blend</strong> — decomposes each view into frequency
+      bands and blends each band with a different-width transition, so low frequencies (color, lighting)
+      blend over a wide area while high frequencies (edges, detail) blend over a narrow one. More
+      expensive, but noticeably smoother across camera overlaps.</li>
+    </ul>
+    <figure>
+      <video src="public/images/week-10-no-blending.webm" controls preload="metadata"></video>
+      <figcaption>No blending — a hard seam where each camera's coverage ends</figcaption>
+    </figure>
+    <figure>
+      <video src="public/images/week-10-feather-blending.webm" controls preload="metadata"></video>
+      <figcaption>Feather blend</figcaption>
+    </figure>
+    <figure>
+      <video src="public/images/week-10-pyramid-blending.webm" controls preload="metadata"></video>
+      <figcaption>Multi-band pyramid blend</figcaption>
+    </figure>
+
+  </div>
+
+  <div class="next-week">
+    <p class="next-label">Next week →</p>
+    <ul class="next-list">
+      <li><span>Study and implement distance-transform-based feathering, like <code>cv::detail::FeatherBlender</code></span></li>
+      <li><span>Put a car PNG in the middle of the BEV canvas to see how it reads as a real car's around-view experience</span></li>
+      <li><span>Make brightness, lighting, and the other image-inheritance/control values changeable at runtime</span></li>
+    </ul>
+  </div>
+
+  <nav class="post-nav">
+    <a class="nav-link" href="week-9.html">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="15 18 9 12 15 6"/></svg>
+      Week 9
+    </a>
+    <span class="nav-spacer"></span>
+  </nav>
+
+  <footer>
+    <span class="footer-left">© 2026 Abdulrahman · GSoC AGL</span>
+    <div class="footer-right">
+      <a href="https://github.com/Abdulrahman-Yasser" target="_blank">GitHub</a>
+      <a href="https://www.automotivelinux.org/" target="_blank">AGL</a>
+      <a href="index.html">Blog</a>
+    </div>
+  </footer>
+
+</div>
+</body>
+</html>
