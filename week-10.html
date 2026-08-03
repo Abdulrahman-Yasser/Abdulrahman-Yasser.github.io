@@ -436,14 +436,23 @@ echo "-> saved in $SESSION/  (stills camA.png/camB.png + video camA.mjpeg/camB.m
       expensive, but noticeably smoother across camera overlaps.</li>
     </ul>
     <figure>
+      <code>
+        ./libcamera‑dmabuf‑capture ‑‑preview ‑‑forward‑left cam‑fl.h265 ‑‑forward‑right cam‑fr.h265 ‑‑backward‑left cam‑bl.h265 ‑‑backward‑right cam‑br.h265
+      </code>
       <video src="public/images/week-10-no-blending.webm" controls preload="metadata"></video>
       <figcaption>No blending — a hard seam where each camera's coverage ends</figcaption>
     </figure>
     <figure>
+      <code>
+        ./libcamera‑dmabuf‑capture ‑‑preview ‑‑blend feather ‑‑forward‑left cam‑fl.h265 ‑‑forward‑right cam‑fr.h265 ‑‑backward‑left cam‑bl.h265 ‑‑backward‑right cam‑br.h265
+      </code>
       <video src="public/images/week-10-feather-blending.webm" controls preload="metadata"></video>
       <figcaption>Feather blend</figcaption>
     </figure>
     <figure>
+      <code>
+        ./libcamera‑dmabuf‑capture ‑‑preview ‑‑blend pyramid ‑‑forward‑left cam‑fl.h265 ‑‑forward‑right cam‑fr.h265 ‑‑backward‑left cam‑bl.h265 ‑‑backward‑right cam‑br.h265
+      </code>
       <video src="public/images/week-10-pyramid-blending.webm" controls preload="metadata"></video>
       <figcaption>Multi-band pyramid blend</figcaption>
     </figure>
