@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Week 11 · GSoC 2026 · AGL Backup Camera</title>
+  <meta name="description" content="Week 11 progress update — GSoC 2026 AI-enabled Backup Camera, AGL." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg:        #0d0f10;
+      --surface:   #141618;
+      --surface2:  #1c1f21;
+      --border:    rgba(255,255,255,0.08);
+      --border2:   rgba(255,255,255,0.14);
+      --text:      #e8e6e0;
+      --muted:     #8a8780;
+      --hint:      #4a4845;
+      --green:     #3fcf8e;
+      --green-dim: rgba(63,207,142,0.12);
+      --amber:     #f5a623;
+      --blue:      #5b9cf6;
+      --blue-dim:  rgba(91,156,246,0.1);
+      --red:       #f87171;
+      --mono: 'IBM Plex Mono', monospace;
+      --sans: 'IBM Plex Sans', sans-serif;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--sans);
+      font-size: 15px;
+      line-height: 1.75;
+      min-height: 100vh;
+    }
+
+    .site { max-width: 720px; margin: 0 auto; padding: 3rem 1.5rem 5rem; }
+
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 3rem;
+      padding-bottom: 1.25rem;
+      border-bottom: 0.5px solid var(--border);
+      flex-wrap: wrap;
+      gap: 0.75rem;
+    }
+    .back-link {
+      display: inline-flex; align-items: center; gap: 6px;
+      font-family: var(--mono); font-size: 12px;
+      color: var(--muted); text-decoration: none;
+      transition: color 0.15s;
+    }
+    .back-link:hover { color: var(--text); }
+    .back-link svg { width: 14px; height: 14px; }
+    .topbar-brand { font-family: var(--mono); font-size: 12px; color: var(--hint); }
+
+    .post-header { margin-bottom: 2.5rem; }
+    .post-eyebrow {
+      display: inline-flex; align-items: center; gap: 8px;
+      font-family: var(--mono); font-size: 11px;
+      color: var(--green);
+      border: 0.5px solid rgba(63,207,142,0.3);
+      background: var(--green-dim);
+      border-radius: 4px; padding: 4px 10px; margin-bottom: 1rem;
+    }
+    h1 {
+      font-family: var(--sans); font-size: clamp(22px, 4vw, 32px);
+      font-weight: 600; color: var(--text); line-height: 1.25; margin-bottom: 0.75rem;
+    }
+    .post-meta {
+      display: flex; flex-wrap: wrap; gap: 1.25rem;
+      font-family: var(--mono); font-size: 12px; color: var(--muted);
+    }
+
+    .sec-label {
+      display: flex; align-items: center; gap: 10px;
+      font-family: var(--mono); font-size: 11px; color: var(--hint);
+      letter-spacing: 0.1em; text-transform: uppercase;
+      margin: 2rem 0 1rem;
+    }
+    .sec-label::after { content: ''; flex: 1; height: 0.5px; background: var(--border); }
+
+    .achievement-list { list-style: none; display: flex; flex-direction: column; gap: 10px; margin-bottom: 1.5rem; }
+    .achievement-list li {
+      display: flex; align-items: flex-start; gap: 10px;
+      font-size: 14px; color: var(--text); line-height: 1.55;
+    }
+    .ach-icon { width: 16px; height: 16px; color: var(--green); flex-shrink: 0; margin-top: 3px; }
+
+    .prose { font-size: 15px; color: var(--text); line-height: 1.8; }
+    .prose p { margin-bottom: 1.1rem; }
+    .prose h2 {
+      font-family: var(--sans); font-size: 18px; font-weight: 500;
+      color: var(--text); margin: 2rem 0 0.75rem;
+    }
+    .prose h3 {
+      font-family: var(--sans); font-size: 15px; font-weight: 500;
+      color: var(--muted); margin: 1.5rem 0 0.5rem;
+    }
+    .prose code {
+      font-family: var(--mono); font-size: 13px;
+      background: var(--surface2); border: 0.5px solid var(--border2);
+      border-radius: 4px; padding: 2px 6px; color: var(--green);
+    }
+    .prose pre {
+      background: var(--surface); border: 0.5px solid var(--border2);
+      border-radius: 8px; padding: 1.25rem; overflow-x: auto;
+      font-family: var(--mono); font-size: 13px; color: var(--text);
+      margin: 1rem 0 1.5rem; line-height: 1.6;
+    }
+    .prose pre code { background: none; border: none; padding: 0; color: inherit; font-size: inherit; }
+    .prose a { color: var(--blue); text-decoration: none; }
+    .prose a:hover { text-decoration: underline; }
+    .prose ul, .prose ol { padding-left: 1.4rem; margin-bottom: 1rem; }
+    .prose li { margin-bottom: 0.35rem; }
+    .prose blockquote {
+      border-left: 3px solid var(--border2); padding-left: 1rem;
+      color: var(--muted); font-style: italic; margin: 1rem 0;
+    }
+    .prose figure { margin: 1.25rem 0 1.5rem; }
+    .prose figure img,
+    .prose figure video { width: 100%; border-radius: 8px; border: 0.5px solid var(--border2); display: block; }
+    .prose figure figcaption { font-family: var(--mono); font-size: 11px; color: var(--muted); margin-top: 6px; text-align: center; }
+    .media-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin: 1.25rem 0 1.5rem; align-items: start; }
+    .media-row figure { margin: 0; }
+    @media (max-width: 620px) { .media-row { grid-template-columns: 1fr; } }
+
+    .video-note {
+      background: var(--surface); border: 0.5px solid var(--border);
+      border-radius: 10px; margin: 1.25rem 0 1.5rem; overflow: hidden;
+    }
+    .video-note summary {
+      display: flex; align-items: center; gap: 8px;
+      padding: 0.85rem 1.1rem; cursor: pointer; user-select: none;
+      font-family: var(--mono); font-size: 13px; color: var(--text);
+      list-style: none;
+    }
+    .video-note summary::-webkit-details-marker { display: none; }
+    .video-note summary:hover { color: var(--green); }
+    .video-note-arrow { width: 14px; height: 14px; color: var(--muted); flex-shrink: 0; transition: transform 0.2s ease, color 0.2s ease; }
+    .video-note[open] .video-note-arrow { transform: rotate(90deg); color: var(--green); }
+    .video-note video {
+      display: block; width: 100%;
+      border-top: 0.5px solid var(--border);
+    }
+
+    .cards-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 1.5rem; }
+    @media (max-width: 540px) { .cards-row { grid-template-columns: 1fr; } }
+    .mini-card {
+      background: var(--surface); border: 0.5px solid var(--border);
+      border-radius: 10px; padding: 1rem;
+    }
+    .mini-card-label {
+      font-family: var(--mono); font-size: 10px; color: var(--hint);
+      letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 8px;
+    }
+    .mini-card-body { font-size: 13px; color: var(--text); line-height: 1.5; }
+
+    .plan-table {
+      width: 100%; border-collapse: collapse; margin: 1rem 0 1.5rem;
+      font-size: 13px;
+    }
+    .plan-table th {
+      font-family: var(--mono); font-size: 10px; color: var(--hint);
+      letter-spacing: 0.08em; text-transform: uppercase;
+      text-align: left; padding: 0 0.75rem 0.6rem;
+      border-bottom: 0.5px solid var(--border2);
+    }
+    .plan-table td {
+      padding: 0.55rem 0.75rem;
+      border-bottom: 0.5px solid var(--border);
+      color: var(--text); vertical-align: top; line-height: 1.5;
+    }
+    .plan-table tr:last-child td { border-bottom: none; }
+    .plan-table td:first-child {
+      font-family: var(--mono); font-size: 12px;
+      color: var(--muted); white-space: nowrap;
+    }
+    .plan-table td.mono { font-family: var(--mono); font-size: 12px; }
+
+    .next-week {
+      background: var(--surface); border: 0.5px solid var(--border);
+      border-left: 3px solid var(--amber); border-radius: 10px;
+      padding: 1rem 1.25rem; margin-top: 2rem;
+    }
+    .next-label { font-family: var(--mono); font-size: 11px; color: var(--amber); margin-bottom: 8px; }
+    .next-text { font-size: 14px; color: var(--text); }
+    .next-week code { white-space: nowrap; }
+    .next-list { list-style: none; display: flex; flex-direction: column; gap: 6px; margin-top: 8px; }
+    .next-list li { display: flex; align-items: flex-start; gap: 8px; font-size: 14px; color: var(--text); }
+    .next-list li::before { content: '→'; color: var(--amber); font-family: var(--mono); font-size: 12px; margin-top: 2px; flex-shrink: 0; }
+
+    .post-nav {
+      display: flex; justify-content: space-between; align-items: center;
+      margin-top: 3rem; padding-top: 1.5rem;
+      border-top: 0.5px solid var(--border);
+      flex-wrap: wrap; gap: 1rem;
+    }
+    .nav-link {
+      display: inline-flex; align-items: center; gap: 6px;
+      font-family: var(--mono); font-size: 12px;
+      color: var(--muted); text-decoration: none;
+      transition: color 0.15s;
+    }
+    .nav-link:hover { color: var(--text); }
+    .nav-link svg { width: 14px; height: 14px; }
+    .nav-spacer { flex: 1; }
+
+    footer {
+      border-top: 0.5px solid var(--border);
+      padding-top: 1.5rem; margin-top: 2rem;
+      display: flex; justify-content: space-between; align-items: center;
+      flex-wrap: wrap; gap: 0.75rem;
+    }
+    .footer-left { font-family: var(--mono); font-size: 12px; color: var(--hint); }
+    .footer-right { display: flex; gap: 14px; }
+    .footer-right a {
+      color: var(--hint); text-decoration: none;
+      font-size: 12px; font-family: var(--mono); transition: color 0.15s;
+    }
+    .footer-right a:hover { color: var(--muted); }
+  </style>
+</head>
+<body>
+<div class="site">
+
+  <nav class="topbar">
+    <a class="back-link" href="index.html">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="15 18 9 12 15 6"/></svg>
+      Back to blog
+    </a>
+    <span class="topbar-brand">gsoc-2026 / agl / week-11</span>
+  </nav>
+
+  <header class="post-header">
+    <div class="post-eyebrow">Week 11 · GSoC 2026 · AGL</div>
+    <h1>Exploring photometric in the cameras (basics)</h1>
+    <div class="post-meta">
+      <span>Aug 4 – Aug 10, 2026</span>
+      <span>Abdulrahman</span>
+    </div>
+  </header>
+
+  <p class="sec-label">This week</p>
+
+  <ul class="achievement-list">
+    <li>
+      <svg class="ach-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="20 6 9 17 4 12"/></svg>
+      <span>Added a coverage-weighted blend mode for stitching the multi-camera BEV output</span>
+    </li>
+    <li>
+      <svg class="ach-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="20 6 9 17 4 12"/></svg>
+      <span>Poked at libcamera's exposure controls in <code>qcam</code> (AeConstraintMode, AeExposureMode, AeEnable) and logged how Lux, exposure time, gain, FPS, and colour temperature actually move together across lighting conditions</span>
+    </li>
+    <li>
+      <svg class="ach-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="20 6 9 17 4 12"/></svg>
+      <span>Wrote six paired <code>rpicam-apps</code> field-capture scripts for the dual-camera rig — independent vs. locked exposure, highlight vs. shadow bias, centre vs. spot metering — ready to run on the car in the street</span>
+    </li>
+    <!-- MORE ACHIEVEMENTS GO HERE -->
+  </ul>
+
+  <p class="sec-label">Details</p>
+
+  <div class="prose">
+
+    <!-- MORE SECTIONS GO HERE -->
+
+    <h2>Exposure, gain, FPS, and colour — how they actually move together</h2>
+    <p>
+      Before touching the shader more, I wanted to actually see how the camera's auto-exposure behaves
+      instead of assuming. Spent a while in <code>qcam</code> (libcamera's Qt viewer) pointing the
+      camera at the same desk under different lighting and different exposure controls, and reading the
+      per-frame metadata it reports back.
+    </p>
+
+    <h3>Less light → longer exposure + more gain → lower FPS</h3>
+    <p>
+      The relationship that matters most for a backup camera: a frame can't be captured faster than its
+      own exposure time. Normally the camera holds a ~33ms frame period (30 FPS). But once
+      auto-exposure needs <em>more</em> than 33ms to get a bright-enough image in low light, the frame
+      period has to stretch to fit it — and FPS is just <code>1 / frame period</code>. So a dim scene
+      doesn't just get grainier, it also gets slower. Same desk, lights on vs. lights off:
+    </p>
+    <div class="media-row">
+      <figure>
+        <img src="public/images/week11-08-47-33-web.jpg" alt="qcam screenshot: well-lit desk, 1141 lux, 30fps" />
+        <figcaption>Lights on — 1141 lux, 30 fps, gain 1.4×</figcaption>
+      </figure>
+      <figure>
+        <img src="public/images/week11-08-49-08-web.jpg" alt="qcam screenshot: dark desk lit only by RGB keyboard, 2.5 lux, 15fps" />
+        <figcaption>Lights off — 2.5 lux, 15 fps, gain 9.8×</figcaption>
+      </figure>
+    </div>
+    <p>
+      Same camera, same settings — <code>AeConstraintMode=Normal</code>, <code>AeEnable</code> on, the
+      controls left untouched — just the room lights switched off. Exposure time went from 10ms to
+      67ms, gain went up almost 7×, and FPS was cut in half. A few more points along that curve, all
+      from the same desk, same settings the whole time:
+    </p>
+    <table class="plan-table">
+      <thead>
+        <tr><th>Setting</th><th>Lux</th><th>Exposure time</th><th>Gain</th><th>FPS</th></tr>
+      </thead>
+      <tbody>
+        <tr><td class="mono">Normal · AE on</td><td class="mono">1141</td><td class="mono">10 ms</td><td class="mono">1.4×</td><td class="mono">30.5</td></tr>
+        <tr><td class="mono">Normal · AE on</td><td class="mono">629</td><td class="mono">17.6 ms</td><td class="mono">1.5×</td><td class="mono">29.8</td></tr>
+        <tr><td class="mono">Normal · AE on</td><td class="mono">157</td><td class="mono">50 ms</td><td class="mono">2.0×</td><td class="mono">20.0</td></tr>
+        <tr><td class="mono">Normal · AE on</td><td class="mono">77</td><td class="mono">54 ms</td><td class="mono">4.0×</td><td class="mono">18.5</td></tr>
+        <tr><td class="mono">Normal · AE on</td><td class="mono">20</td><td class="mono">66.7 ms</td><td class="mono">9.8×</td><td class="mono">15.0</td></tr>
+        <tr><td class="mono">Normal · AE on</td><td class="mono">2.5</td><td class="mono">66.7 ms</td><td class="mono">9.8×</td><td class="mono">15.0</td></tr>
+      </tbody>
+    </table>
+    <p>
+      FPS holds at ~30 right up until exposure time crosses that ~33ms ceiling (around 150–160 lux in
+      this room), then drops in lockstep with it. Worth remembering once the rig is tested at dusk/night
+      — the backup camera doesn't just get noisier in the dark, it also gets laggier.
+    </p>
+
+    <h3>Colour temperature follows the light source, not the brightness</h3>
+    <p>
+      ColourGains/ColourTemperature come from auto white balance, which reacts to <em>what kind of
+      light</em> is lighting the scene, not to how much of it there is. Daylight through the window read
+      around 6400K; the same desk lit only by the room's warm indoor lamp read 3300–3800K, regardless of
+      whether that lamp-lit scene was bright or dim; a phone flashlight pointed at the desk read
+      3700–4100K. Lux swung by three orders of magnitude across these shots, but colour temperature
+      stayed clustered by <em>which light source</em> was dominant, not by how bright it was.
+    </p>
+
+    <h3>AeConstraintMode and AeExposureMode: same scene, different targets</h3>
+    <p>
+      This time the lighting stayed fixed (same desk, same bright window in frame) and the
+      <em>setting</em> was the thing I changed between shots — each line below is one run:
+    </p>
+    <pre><code>AeConstraintMode=Custom      # baseline — exposes evenly for the whole scene (98% mean, 30ms)
+AeConstraintMode=Highlight   # protects the blown-out window, rest of frame goes dark (27% mean, 12ms)
+AeEnable=false               # freezes exposure/gain at their last computed value (9% mean, 23ms)
+AeConstraintMode=Shadows     # lifts shadow detail, lets the window clip instead (67% mean, 50ms)
+AeExposureMode=Short         # biases toward shorter shutter + more gain, not more time (11% mean, 36ms)</code></pre>
+    <p>
+      <code>Highlight</code> pulls exposure down hard to protect the blown-out window instead of
+      exposing for the room — mean frame brightness dropped from 98% to 27% for the exact same scene.
+      <code>Shadows</code> does the opposite — pushes exposure up to lift the dark keyboard/desk even if
+      the window clips, and ran into the same frame-period ceiling as the low-light case above (FPS fell
+      to ~20 because exposure time hit its cap). <code>Short</code> mode is the odd one out — it doesn't
+      just shorten exposure, it accepts a noticeably darker (11%) image in exchange for more gain instead
+      of more time, which is exactly the trade-off worth having once we're capturing while the car is
+      actually moving, to cut down motion blur.
+    </p>
+
+    <h2>Field-test rig: six rpicam-apps scripts for the car</h2>
+    <p>
+      <code>rpicam-apps</code> doesn't expose <code>AeConstraintMode</code> directly, so these six
+      throwaway scripts approximate the qcam findings above with flags it does understand — one
+      variable changed per script, both cameras, same <code>1640:1232</code> full-FOV mode, 30s of
+      video + metadata JSON each run:
+    </p>
+    <ul>
+      <li><code>run1_independent_auto</code> — OPT: <code>(none)</code> — both cameras full auto, baseline camA/camB drift.</li>
+      <li><code>run2_locked_manual</code> — OPT: <code>--shutter --gain --awbgains --denoise off</code> — both cameras pinned to identical manual values read off run1.</li>
+      <li><code>run3a_constraint_highlight</code> — OPT: <code>--awb auto --metering centre --exposure short</code> — biases exposure to protect highlights.</li>
+      <li><code>run3b_constraint_shadows</code> — OPT: <code>--awb auto --metering centre --exposure long</code> — biases exposure to lift shadows.</li>
+      <li><code>run4a_metering_centre</code> — OPT: <code>--awb auto --metering centre</code> — centre-weighted metering baseline.</li>
+      <li><code>run4b_metering_spot</code> — OPT: <code>--awb auto --metering spot</code> — spot metering, small central region only.</li>
+    </ul>
+
+    <h2>Coverage blend</h2>
+    <p>
+      Feather and pyramid weight a camera by <em>which direction the fragment is from the car</em> —
+      each camera just owns a fixed angular slice, regardless of how well it actually sees that ground
+      point. This week I added a third mode, <code>--blend coverage</code>, that weights by how close
+      that point is to the <em>edge of the camera's own image</em> instead. The idea: a point that
+      reprojects near the center of a camera's frame is more trustworthy than one landing right at the
+      frame's border, since lens distortion and calibration error are both worst at the edges.
+    </p>
+    <p>
+      Concretely, every fragment already gets a normalized image position <code>(u,v)</code> from the
+      homography lookup (that's how the shader knows if a camera can see it at all). Coverage mode just
+      measures how far <code>(u,v)</code> is from that camera's frame edge:
+    </p>
+    <pre><code>margin = min(u, 1-u, v, 1-v)</code></pre>
+    <p>
+      Dead-center (<code>u=v=0.5</code>) gives the biggest margin; right at the border gives ~0. That
+      margin gets smoothed into a weight the same way every other blend mode here does, then combined
+      across cameras with a plain weighted average — same blend math as feather, just a different weight.
+    </p>
+    <p>
+      It's not wired into the pyramid mode yet, only feather's pipeline — a follow-up for later.
+    </p>
+    <figure>
+      <code>
+        ./libcamera‑dmabuf‑capture ‑‑preview ‑‑blend coverage ‑‑forward‑left cam‑fl.h265 ‑‑forward‑right cam‑fr.h265 ‑‑backward‑left cam‑bl.h265 ‑‑backward‑right cam‑br.h265
+      </code>
+      <video src="public/images/week-11-coverage-blending.webm" controls preload="metadata"></video>
+      <figcaption>Coverage blend</figcaption>
+    </figure>
+    <figure>
+      <img src="public/images/week11-amazon-problem-web.jpg" alt="Amazon order page showing a delivery attempted but not received" />
+      <figcaption>"Delivery attempted" — narrator: it wasn't</figcaption>
+    </figure>
+
+  </div>
+
+  <div class="next-week">
+    <p class="next-label">Next week →</p>
+    <ul class="next-list">
+      <li><span>Run the six <code>rpicam-apps</code> scripts on the car in the street and compare camA/camB metadata (exposure, gain, colour gains) across conditions</span></li>
+      <li><span>Pick AE/metering settings for the final rig based on what the field data shows</span></li>
+    </ul>
+  </div>
+
+  <nav class="post-nav">
+    <a class="nav-link" href="week-10.html">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="15 18 9 12 15 6"/></svg>
+      Week 10
+    </a>
+    <span class="nav-spacer"></span>
+  </nav>
+
+  <footer>
+    <span class="footer-left">© 2026 Abdulrahman · GSoC AGL</span>
+    <div class="footer-right">
+      <a href="https://github.com/Abdulrahman-Yasser" target="_blank">GitHub</a>
+      <a href="https://www.automotivelinux.org/" target="_blank">AGL</a>
+      <a href="index.html">Blog</a>
+    </div>
+  </footer>
+
+</div>
+</body>
+</html>
