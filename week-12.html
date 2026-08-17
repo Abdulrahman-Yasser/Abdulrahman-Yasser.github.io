@@ -1,0 +1,530 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Week 12 · GSoC 2026 · AGL Backup Camera</title>
+  <meta name="description" content="Week 12 progress update — GSoC 2026 AI-enabled Backup Camera, AGL." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg:        #0d0f10;
+      --surface:   #141618;
+      --surface2:  #1c1f21;
+      --border:    rgba(255,255,255,0.08);
+      --border2:   rgba(255,255,255,0.14);
+      --text:      #e8e6e0;
+      --muted:     #8a8780;
+      --hint:      #4a4845;
+      --green:     #3fcf8e;
+      --green-dim: rgba(63,207,142,0.12);
+      --amber:     #f5a623;
+      --blue:      #5b9cf6;
+      --blue-dim:  rgba(91,156,246,0.1);
+      --red:       #f87171;
+      --mono: 'IBM Plex Mono', monospace;
+      --sans: 'IBM Plex Sans', sans-serif;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--sans);
+      font-size: 15px;
+      line-height: 1.75;
+      min-height: 100vh;
+    }
+
+    .site { max-width: 720px; margin: 0 auto; padding: 3rem 1.5rem 5rem; }
+
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 3rem;
+      padding-bottom: 1.25rem;
+      border-bottom: 0.5px solid var(--border);
+      flex-wrap: wrap;
+      gap: 0.75rem;
+    }
+    .back-link {
+      display: inline-flex; align-items: center; gap: 6px;
+      font-family: var(--mono); font-size: 12px;
+      color: var(--muted); text-decoration: none;
+      transition: color 0.15s;
+    }
+    .back-link:hover { color: var(--text); }
+    .back-link svg { width: 14px; height: 14px; }
+    .topbar-brand { font-family: var(--mono); font-size: 12px; color: var(--hint); }
+
+    .post-header { margin-bottom: 2.5rem; }
+    .post-eyebrow {
+      display: inline-flex; align-items: center; gap: 8px;
+      font-family: var(--mono); font-size: 11px;
+      color: var(--green);
+      border: 0.5px solid rgba(63,207,142,0.3);
+      background: var(--green-dim);
+      border-radius: 4px; padding: 4px 10px; margin-bottom: 1rem;
+    }
+    h1 {
+      font-family: var(--sans); font-size: clamp(22px, 4vw, 32px);
+      font-weight: 600; color: var(--text); line-height: 1.25; margin-bottom: 0.75rem;
+    }
+    .post-meta {
+      display: flex; flex-wrap: wrap; gap: 1.25rem;
+      font-family: var(--mono); font-size: 12px; color: var(--muted);
+    }
+
+    .sec-label {
+      display: flex; align-items: center; gap: 10px;
+      font-family: var(--mono); font-size: 11px; color: var(--hint);
+      letter-spacing: 0.1em; text-transform: uppercase;
+      margin: 2rem 0 1rem;
+    }
+    .sec-label::after { content: ''; flex: 1; height: 0.5px; background: var(--border); }
+
+    .achievement-list { list-style: none; display: flex; flex-direction: column; gap: 10px; margin-bottom: 1.5rem; }
+    .achievement-list li {
+      display: flex; align-items: flex-start; gap: 10px;
+      font-size: 14px; color: var(--text); line-height: 1.55;
+    }
+    .ach-icon { width: 16px; height: 16px; color: var(--green); flex-shrink: 0; margin-top: 3px; }
+
+    .prose { font-size: 15px; color: var(--text); line-height: 1.8; }
+    .prose p { margin-bottom: 1.1rem; }
+    .prose h2 {
+      font-family: var(--sans); font-size: 18px; font-weight: 500;
+      color: var(--text); margin: 2rem 0 0.75rem;
+    }
+    .prose h3 {
+      font-family: var(--sans); font-size: 15px; font-weight: 500;
+      color: var(--muted); margin: 1.5rem 0 0.5rem;
+    }
+    .prose code {
+      font-family: var(--mono); font-size: 13px;
+      background: var(--surface2); border: 0.5px solid var(--border2);
+      border-radius: 4px; padding: 2px 6px; color: var(--green);
+    }
+    .prose pre {
+      background: var(--surface); border: 0.5px solid var(--border2);
+      border-radius: 8px; padding: 1.25rem; overflow-x: auto;
+      font-family: var(--mono); font-size: 13px; color: var(--text);
+      margin: 1rem 0 1.5rem; line-height: 1.6;
+    }
+    .prose pre code { background: none; border: none; padding: 0; color: inherit; font-size: inherit; }
+    .prose a { color: var(--blue); text-decoration: none; }
+    .prose a:hover { text-decoration: underline; }
+    .prose ul, .prose ol { padding-left: 1.4rem; margin-bottom: 1rem; }
+    .prose li { margin-bottom: 0.35rem; }
+    .prose blockquote {
+      border-left: 3px solid var(--border2); padding-left: 1rem;
+      color: var(--muted); font-style: italic; margin: 1rem 0;
+    }
+    .prose figure { margin: 1.25rem 0 1.5rem; }
+    .prose figure img,
+    .prose figure video { width: 100%; border-radius: 8px; border: 0.5px solid var(--border2); display: block; }
+    .prose figure figcaption { font-family: var(--mono); font-size: 11px; color: var(--muted); margin-top: 6px; text-align: center; }
+    .media-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin: 1.25rem 0 1.5rem; align-items: start; }
+    .media-row figure { margin: 0; }
+    @media (max-width: 620px) { .media-row { grid-template-columns: 1fr; } }
+
+    .video-note {
+      background: var(--surface); border: 0.5px solid var(--border);
+      border-radius: 10px; margin: 1.25rem 0 1.5rem; overflow: hidden;
+    }
+    .video-note summary {
+      display: flex; align-items: center; gap: 8px;
+      padding: 0.85rem 1.1rem; cursor: pointer; user-select: none;
+      font-family: var(--mono); font-size: 13px; color: var(--text);
+      list-style: none;
+    }
+    .video-note summary::-webkit-details-marker { display: none; }
+    .video-note summary:hover { color: var(--green); }
+    .video-note-arrow { width: 14px; height: 14px; color: var(--muted); flex-shrink: 0; transition: transform 0.2s ease, color 0.2s ease; }
+    .video-note[open] .video-note-arrow { transform: rotate(90deg); color: var(--green); }
+    .video-note video {
+      display: block; width: 100%;
+      border-top: 0.5px solid var(--border);
+    }
+
+    .cards-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 1.5rem; }
+    @media (max-width: 540px) { .cards-row { grid-template-columns: 1fr; } }
+    .mini-card {
+      background: var(--surface); border: 0.5px solid var(--border);
+      border-radius: 10px; padding: 1rem;
+    }
+    .mini-card-label {
+      font-family: var(--mono); font-size: 10px; color: var(--hint);
+      letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 8px;
+    }
+    .mini-card-body { font-size: 13px; color: var(--text); line-height: 1.5; }
+
+    .plan-table {
+      width: 100%; border-collapse: collapse; margin: 1rem 0 1.5rem;
+      font-size: 13px;
+    }
+    .plan-table th {
+      font-family: var(--mono); font-size: 10px; color: var(--hint);
+      letter-spacing: 0.08em; text-transform: uppercase;
+      text-align: left; padding: 0 0.75rem 0.6rem;
+      border-bottom: 0.5px solid var(--border2);
+    }
+    .plan-table td {
+      padding: 0.55rem 0.75rem;
+      border-bottom: 0.5px solid var(--border);
+      color: var(--text); vertical-align: top; line-height: 1.5;
+    }
+    .plan-table tr:last-child td { border-bottom: none; }
+    .plan-table td:first-child {
+      font-family: var(--mono); font-size: 12px;
+      color: var(--muted); white-space: nowrap;
+    }
+    .plan-table td.mono { font-family: var(--mono); font-size: 12px; }
+
+    .next-week {
+      background: var(--surface); border: 0.5px solid var(--border);
+      border-left: 3px solid var(--amber); border-radius: 10px;
+      padding: 1rem 1.25rem; margin-top: 2rem;
+    }
+    .next-label { font-family: var(--mono); font-size: 11px; color: var(--amber); margin-bottom: 8px; }
+    .next-text { font-size: 14px; color: var(--text); }
+    .next-week code { white-space: nowrap; }
+    .next-list { list-style: none; display: flex; flex-direction: column; gap: 6px; margin-top: 8px; }
+    .next-list li { display: flex; align-items: flex-start; gap: 8px; font-size: 14px; color: var(--text); }
+    .next-list li::before { content: '→'; color: var(--amber); font-family: var(--mono); font-size: 12px; margin-top: 2px; flex-shrink: 0; }
+
+    .post-nav {
+      display: flex; justify-content: space-between; align-items: center;
+      margin-top: 3rem; padding-top: 1.5rem;
+      border-top: 0.5px solid var(--border);
+      flex-wrap: wrap; gap: 1rem;
+    }
+    .nav-link {
+      display: inline-flex; align-items: center; gap: 6px;
+      font-family: var(--mono); font-size: 12px;
+      color: var(--muted); text-decoration: none;
+      transition: color 0.15s;
+    }
+    .nav-link:hover { color: var(--text); }
+    .nav-link svg { width: 14px; height: 14px; }
+    .nav-spacer { flex: 1; }
+
+    footer {
+      border-top: 0.5px solid var(--border);
+      padding-top: 1.5rem; margin-top: 2rem;
+      display: flex; justify-content: space-between; align-items: center;
+      flex-wrap: wrap; gap: 0.75rem;
+    }
+    .footer-left { font-family: var(--mono); font-size: 12px; color: var(--hint); }
+    .footer-right { display: flex; gap: 14px; }
+    .footer-right a {
+      color: var(--hint); text-decoration: none;
+      font-size: 12px; font-family: var(--mono); transition: color 0.15s;
+    }
+    .footer-right a:hover { color: var(--muted); }
+  </style>
+</head>
+<body>
+<div class="site">
+
+  <nav class="topbar">
+    <a class="back-link" href="index.html">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="15 18 9 12 15 6"/></svg>
+      Back to blog
+    </a>
+    <span class="topbar-brand">gsoc-2026 / agl / week-12</span>
+  </nav>
+
+  <header class="post-header">
+    <div class="post-eyebrow">Week 12 · GSoC 2026 · AGL</div>
+    <h1>Cave man color calibration</h1>
+    <div class="post-meta">
+      <span>Aug 11 – Aug 17, 2026</span>
+      <span>Abdulrahman</span>
+    </div>
+  </header>
+
+  <p class="sec-label">This week</p>
+
+  <ul class="achievement-list">
+    <!-- ACHIEVEMENTS GO HERE -->
+    <li>
+      <svg class="ach-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="20 6 9 17 4 12"/></svg>
+      <span>Implemented a car icon overlay composited over the live BEV canvas, loaded through <code>stb_image</code> (vendored as a submodule)</span>
+    </li>
+    <li>
+      <svg class="ach-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="20 6 9 17 4 12"/></svg>
+      <span>Researched rigid mounting materials (foam PVC board, acrylic) for the checkerboard, since paper-on-wood/cardboard warped too much back in week 10</span>
+    </li>
+    <li>
+      <svg class="ach-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="20 6 9 17 4 12"/></svg>
+      <span>Ordered two vinyl prints of the checkerboard pattern instead of paper</span>
+    </li>
+    <li>
+      <svg class="ach-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="20 6 9 17 4 12"/></svg>
+      <span>Booked a studio room and lined up a proper colour chart and an adjustable-colour-temperature light to run the real Camera Tuning Tool calibration</span>
+    </li>
+    <!-- MORE ACHIEVEMENTS GO HERE -->
+  </ul>
+
+  <p class="sec-label">Details</p>
+
+  <div class="prose">
+    <!-- MORE SECTIONS GO HERE -->
+
+    <h2>A car icon overlay for the BEV canvas</h2>
+    <p>
+      Implemented a static top-down car icon (<code>--car-icon</code>) that <code>draw_car_icon()</code>
+      composites over the live BEV canvas, scaled to the car's real-world dimensions so it sits at the
+      correct size relative to the ground plane around it. Loading the icon goes through
+      <code>stb_image</code>'s <code>stbi_load(path, &amp;w, &amp;h, &amp;channels, 4)</code> — normalizes
+      whatever image format it's given (PNG, JPEG, BMP, TGA, etc.) to 8-bit RGBA in one call, vendored as
+      a single header (<a href="https://github.com/nothings/stb" target="_blank">nothings/stb</a>) rather
+      than pulling in a full system dependency just for this. <code>save_snapshot()</code>'s write side
+      still uses <code>libpng</code> directly — <code>stb_image</code> is read-only, so it couldn't cover
+      that half.
+    </p>
+    <figure>
+      <video src="public/images/week-12/week-12-car-icon.mp4" controls preload="metadata"></video>
+      <figcaption>The car icon composited over the live BEV canvas, loaded through the new stb_image path</figcaption>
+    </figure>
+
+    <h2>Field test: seven runs on the actual car</h2>
+    <p>
+      Ran the <code>rpicam-apps</code> scripts from last week for real — both cameras, parked outside,
+      one script per variable tested. Each command below is the actual script's <code>rpicam-vid</code>
+      call for camera 0, variables substituted in; camera 1 is the same command with
+      <code>--camera 1</code> and its own output names. Video from both cameras follows each command.
+    </p>
+
+    <h3>run1 — independent auto</h3>
+    <pre><code>rpicam‑vid ‑‑camera 0 ‑‑mode 1640:1232 ‑‑width 1640 ‑‑height 1232 ‑‑codec mjpeg ‑t 45000 ‑‑nopreview ‑‑metadata camA_meta.json ‑‑metadata‑format json ‑o camA.mjpeg</code></pre>
+    <div class="media-row">
+      <figure>
+        <video src="public/images/week-12/run_1_auto_exposure_separate_each/camB-web.mp4" controls preload="metadata"></video>
+        <figcaption>Camera B</figcaption>
+      </figure>
+      <figure>
+        <video src="public/images/week-12/run_1_auto_exposure_separate_each/camA-web.mp4" controls preload="metadata"></video>
+        <figcaption>Camera A</figcaption>
+      </figure>
+    </div>
+
+    <h3>run2 — locked manual</h3>
+    <pre><code>rpicam‑vid ‑‑camera 0 ‑‑mode 1640:1232 ‑‑width 1640 ‑‑height 1232 ‑‑codec mjpeg ‑t 45000 ‑‑nopreview ‑‑shutter 2419 ‑‑gain 1.0 ‑‑awbgains 1.48,1.56 ‑‑denoise off ‑‑metadata camA_meta.json ‑‑metadata‑format json ‑o camA.mjpeg</code></pre>
+    <div class="media-row">
+      <figure>
+        <video src="public/images/week-12/run_2_constant_exposure/camB-web.mp4" controls preload="metadata"></video>
+        <figcaption>Camera B</figcaption>
+      </figure>
+      <figure>
+        <video src="public/images/week-12/run_2_constant_exposure/camA-web.mp4" controls preload="metadata"></video>
+        <figcaption>Camera A</figcaption>
+      </figure>
+    </div>
+
+    <h3>run3a — highlight</h3>
+    <pre><code>rpicam‑vid ‑‑camera 0 ‑‑mode 1640:1232 ‑‑width 1640 ‑‑height 1232 ‑‑codec mjpeg ‑t 45000 ‑‑nopreview ‑‑awb auto ‑‑metering centre ‑‑exposure short ‑‑metadata camA_meta.json ‑‑metadata‑format json ‑o camA.mjpeg</code></pre>
+    <div class="media-row">
+      <figure>
+        <video src="public/images/week-12/run3a_highlight/camB-web.mp4" controls preload="metadata"></video>
+        <figcaption>Camera B</figcaption>
+      </figure>
+      <figure>
+        <video src="public/images/week-12/run3a_highlight/camA-web.mp4" controls preload="metadata"></video>
+        <figcaption>Camera A</figcaption>
+      </figure>
+    </div>
+
+    <h3>run3b — shadows</h3>
+    <pre><code>rpicam‑vid ‑‑camera 0 ‑‑mode 1640:1232 ‑‑width 1640 ‑‑height 1232 ‑‑codec mjpeg ‑t 45000 ‑‑nopreview ‑‑awb auto ‑‑metering centre ‑‑exposure long ‑‑metadata camA_meta.json ‑‑metadata‑format json ‑o camA.mjpeg</code></pre>
+    <div class="media-row">
+      <figure>
+        <video src="public/images/week-12/run3b_shadows/camB-web.mp4" controls preload="metadata"></video>
+        <figcaption>Camera B</figcaption>
+      </figure>
+      <figure>
+        <video src="public/images/week-12/run3b_shadows/camA-web.mp4" controls preload="metadata"></video>
+        <figcaption>Camera A</figcaption>
+      </figure>
+    </div>
+
+    <h3>run4a — metering centre</h3>
+    <pre><code>rpicam‑vid ‑‑camera 0 ‑‑mode 1640:1232 ‑‑width 1640 ‑‑height 1232 ‑‑codec mjpeg ‑t 45000 ‑‑nopreview ‑‑awb auto ‑‑metering centre ‑‑metadata camA_meta.json ‑‑metadata‑format json ‑o camA.mjpeg</code></pre>
+    <div class="media-row">
+      <figure>
+        <video src="public/images/week-12/run4a_metering_centre/camB-web.mp4" controls preload="metadata"></video>
+        <figcaption>Camera B</figcaption>
+      </figure>
+      <figure>
+        <video src="public/images/week-12/run4a_metering_centre/camA-web.mp4" controls preload="metadata"></video>
+        <figcaption>Camera A</figcaption>
+      </figure>
+    </div>
+
+    <h3>run4b — metering spot</h3>
+    <pre><code>rpicam‑vid ‑‑camera 0 ‑‑mode 1640:1232 ‑‑width 1640 ‑‑height 1232 ‑‑codec mjpeg ‑t 45000 ‑‑nopreview ‑‑awb auto ‑‑metering spot ‑‑metadata camA_meta.json ‑‑metadata‑format json ‑o camA.mjpeg</code></pre>
+    <div class="media-row">
+      <figure>
+        <video src="public/images/week-12/run4b_metering_spot/camB-web.mp4" controls preload="metadata"></video>
+        <figcaption>Camera B</figcaption>
+      </figure>
+      <figure>
+        <video src="public/images/week-12/run4b_metering_spot/camA-web.mp4" controls preload="metadata"></video>
+        <figcaption>Camera A</figcaption>
+      </figure>
+    </div>
+
+    <h3>run4c — metering average</h3>
+    <pre><code>rpicam‑vid ‑‑camera 0 ‑‑mode 1640:1232 ‑‑width 1640 ‑‑height 1232 ‑‑codec mjpeg ‑t 45000 ‑‑nopreview ‑‑awb auto ‑‑metering average ‑‑metadata camA_meta.json ‑‑metadata‑format json ‑o camA.mjpeg</code></pre>
+    <div class="media-row">
+      <figure>
+        <video src="public/images/week-12/run4c_metering_average/camB-web.mp4" controls preload="metadata"></video>
+        <figcaption>Camera B</figcaption>
+      </figure>
+      <figure>
+        <video src="public/images/week-12/run4c_metering_average/camA-web.mp4" controls preload="metadata"></video>
+        <figcaption>Camera A</figcaption>
+      </figure>
+    </div>
+
+    <h2>A false start on manual white balance</h2>
+    <p>
+      The field test above showed camA and camB landing on noticeably different colour temperatures
+      even under identical settings — each camera's own auto white balance guessing independently
+      instead of agreeing. So I tried fixing it by hand: SSH'd into the Pi, disabled
+      <code>AwbEnable</code>, and dragged <code>ColourGains[0]</code>/<code>ColourGains[1]</code>
+      (red/blue gain) live while watching the RGB histogram converge on a neutral reference target.
+    </p>
+    <p>
+      First attempt used a sheet of A1 paper as the neutral reference — wrong tool for the job, so I
+      switched to a plain white disk drawer front instead, which held still and gave a more consistent
+      flat surface to balance against. Gain settled around <code>R=1.44</code>, <code>B=1.92</code> on
+      the drawer:
+    </p>
+    <div class="media-row">
+      <figure>
+        <img src="public/images/week-12/color_manual/gain-wrong-web.jpg" alt="Camshark control panel with red colour gain dragged near zero, image showing a wrong greenish cast" />
+        <figcaption>Red gain dragged toward 0 — visibly wrong</figcaption>
+      </figure>
+      <figure>
+        <img src="public/images/week-12/color_manual/gain-fixed-web.jpg" alt="Camshark control panel with ColourGains set to 1.44/1.92, image showing a neutral white drawer front" />
+        <figcaption>R=1.44, B=1.92 — settled, neutral</figcaption>
+      </figure>
+    </div>
+    <p>
+      Except it isn't a real fix yet: the light on the drawer was a phone flashlight I was holding, not
+      a fixed source — its angle and distance drifted between shots, so the "neutral" target the gains
+      converged against wasn't actually constant. The histogram looked right, but I can't trust the
+      numbers until the light itself is fixed in place. Redoing this with a stable light source is next.
+    </p>
+
+    <h3>What I should have been doing: the real Camera Tuning Tool</h3>
+    <p>
+      Went and read the calibration chapter of Raspberry Pi's own
+      <a href="https://pip-assets.raspberrypi.com/categories/1259-audio-camera-and-display/documents/RP-009070-TC-2-Camera%20Algorithm%20and%20Tuning%20Guide.pdf" target="_blank">Camera Algorithm and Tuning Guide</a>
+      afterwards, and it makes the drawer-and-flashlight attempt look exactly as improvised as it was.
+      The actual tool (<code>ctt.py</code>, shipped with <code>libcamera</code>) doesn't hand-fit two
+      gain numbers against one light — it wants a real X-rite/Macbeth 24-patch colour chart,
+      photographed as raw DNGs across several distinct illuminants (each filename encoding its colour
+      temperature and lux, like <code>2954K_1749L.dng</code>), plus a handful of flat, featureless shots
+      per illuminant for lens shading. Feed a folder of those into <code>ctt.py</code> and it fits the
+      whole tuning file at once — the AWB colour-temperature curve, the colour correction matrices, the
+      lens shading tables — from real measured data instead of one eyeballed histogram. That's the
+      version of this worth actually doing: get a Macbeth chart, shoot it under a few real illuminants,
+      and run the tool instead of dragging sliders.
+    </p>
+    <p>
+      So that's the plan: booked a studio room and lined up rentals for the two pieces of equipment the
+      guide actually asks for — a <a href="https://www.datacolor.com/spyder/products/spydercheckr/" target="_blank">Datacolor SpyderCheckr</a>,
+      which plays the same role as the X-rite Macbeth chart (24 colour patches plus a grey/white panel
+      on the back for the lens-shading shots), and an RGB light wand with adjustable colour temperature
+      (2800K–9990K) to act as a controlled, repeatable illuminant instead of a handheld phone flashlight:
+    </p>
+    <div class="media-row">
+      <figure>
+        <img src="public/images/week-12/setup/spydercheckr-rental.jpg" alt="Rental listing for a Datacolor SpyderCheckr colour chart kit" />
+        <figcaption>Datacolor SpyderCheckr — the Macbeth-chart equivalent</figcaption>
+      </figure>
+      <figure>
+        <img src="public/images/week-12/setup/rgb-light-rental.jpg" alt="Rental listing for an adjustable colour-temperature RGB light wand" />
+        <figcaption>Adjustable 2800K–9990K light — a fixed illuminant, finally</figcaption>
+      </figure>
+    </div>
+    <p>
+      Also separately looked into what to actually mount the checkerboard on this time — foam PVC board
+      and acrylic as candidates, since the paper-on-wood/cardboard from week 10 warped too much to trust
+      — and ordered two vinyl prints of the checkerboard pattern instead of paper, which should hold flat
+      on its own without a rigid backing at all.
+    </p>
+
+    <h2>The rig, and a networking lesson</h2>
+    <p>
+      Rest of the week's setup, for reference. Everything lives in the trunk during a capture session —
+      Pi, camera pair, laptop, and (finally) the power bank that never arrived a couple of weeks ago:
+    </p>
+    <div class="media-row">
+      <figure>
+        <img src="public/images/week-12/setup/trunk-rig.jpg" alt="Raspberry Pi rig, laptop, and power bank set up in the car's trunk" />
+        <figcaption>The whole rig, trunk-mounted</figcaption>
+      </figure>
+      <figure>
+        <img src="public/images/week-12/setup/cat-inspection.jpg" alt="A cat jumping into the trunk to inspect the camera rig" />
+        <figcaption>Quality assurance, uninvited</figcaption>
+      </figure>
+    </div>
+    <p>
+      Also laid out some improvised colour sheets (not a real Macbeth chart, just flat red/green/blue
+      mats) and the ChArUco board on the ground behind the car — more useful as a reminder of what a
+      proper calibration shoot needs than as an actual substitute for one:
+    </p>
+    <figure>
+      <img src="public/images/week-12/setup/rgb-targets.jpg" alt="Red, green, and blue reference sheets and a ChArUco board laid out behind the car" />
+      <figcaption>Improvised colour references, not the real thing</figcaption>
+    </figure>
+    <p>
+      Separately: <code>Camshark</code> (the remote camera viewer from this week's colour work) was
+      running over the Pi's WiFi connection, and it took the entire home network down with it —
+      couldn't even get another device online while it was connected. Switching the Pi to a wired
+      Ethernet connection instead fixed it outright (that's what the <code>cam1-eth</code> filenames
+      from earlier were — camera 1 was captured after the switch). Best guess is the raw preview stream
+      was saturating the WiFi link badly enough to choke the router for everyone else on it; haven't
+      confirmed that's the actual cause, just that Ethernet made the problem disappear.
+    </p>
+    <figure>
+      <img src="public/images/week-12/setup/ethernet-fix.jpg" alt="Raspberry Pi with an Ethernet cable connected instead of WiFi" />
+      <figcaption>Wired, and the network stopped falling over</figcaption>
+    </figure>
+  </div>
+
+  <div class="next-week">
+    <p class="next-label">Next week →</p>
+    <ul class="next-list">
+      <li><span>Calibrate the cameras' colours with the right tools (SpyderCheckr + the adjustable light), and test it across multiple colour temperatures and RGB colours</span></li>
+      <li><span>Test the new parameters out in the street with the new printed vinyl checkerboard</span></li>
+    </ul>
+  </div>
+
+  <nav class="post-nav">
+    <a class="nav-link" href="week-11.html">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="15 18 9 12 15 6"/></svg>
+      Week 11
+    </a>
+    <span class="nav-spacer"></span>
+  </nav>
+
+  <footer>
+    <span class="footer-left">© 2026 Abdulrahman · GSoC AGL</span>
+    <div class="footer-right">
+      <a href="https://github.com/Abdulrahman-Yasser" target="_blank">GitHub</a>
+      <a href="https://www.automotivelinux.org/" target="_blank">AGL</a>
+      <a href="index.html">Blog</a>
+    </div>
+  </footer>
+
+</div>
+</body>
+</html>
