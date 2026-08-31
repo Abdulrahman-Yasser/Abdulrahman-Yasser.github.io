@@ -1,0 +1,828 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Week 13 · GSoC 2026 · AGL Backup Camera</title>
+  <meta name="description" content="Week 13 progress update — GSoC 2026 AI-enabled Backup Camera, AGL." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg:        #0d0f10;
+      --surface:   #141618;
+      --surface2:  #1c1f21;
+      --border:    rgba(255,255,255,0.08);
+      --border2:   rgba(255,255,255,0.14);
+      --text:      #e8e6e0;
+      --muted:     #8a8780;
+      --hint:      #4a4845;
+      --green:     #3fcf8e;
+      --green-dim: rgba(63,207,142,0.12);
+      --amber:     #f5a623;
+      --blue:      #5b9cf6;
+      --blue-dim:  rgba(91,156,246,0.1);
+      --red:       #f87171;
+      --mono: 'IBM Plex Mono', monospace;
+      --sans: 'IBM Plex Sans', sans-serif;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--sans);
+      font-size: 15px;
+      line-height: 1.75;
+      min-height: 100vh;
+    }
+
+    .site { max-width: 720px; margin: 0 auto; padding: 3rem 1.5rem 5rem; }
+
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 3rem;
+      padding-bottom: 1.25rem;
+      border-bottom: 0.5px solid var(--border);
+      flex-wrap: wrap;
+      gap: 0.75rem;
+    }
+    .back-link {
+      display: inline-flex; align-items: center; gap: 6px;
+      font-family: var(--mono); font-size: 12px;
+      color: var(--muted); text-decoration: none;
+      transition: color 0.15s;
+    }
+    .back-link:hover { color: var(--text); }
+    .back-link svg { width: 14px; height: 14px; }
+    .topbar-brand { font-family: var(--mono); font-size: 12px; color: var(--hint); }
+
+    .post-header { margin-bottom: 2.5rem; }
+    .post-eyebrow {
+      display: inline-flex; align-items: center; gap: 8px;
+      font-family: var(--mono); font-size: 11px;
+      color: var(--green);
+      border: 0.5px solid rgba(63,207,142,0.3);
+      background: var(--green-dim);
+      border-radius: 4px; padding: 4px 10px; margin-bottom: 1rem;
+    }
+    h1 {
+      font-family: var(--sans); font-size: clamp(22px, 4vw, 32px);
+      font-weight: 600; color: var(--text); line-height: 1.25; margin-bottom: 0.75rem;
+    }
+    .post-meta {
+      display: flex; flex-wrap: wrap; gap: 1.25rem;
+      font-family: var(--mono); font-size: 12px; color: var(--muted);
+    }
+
+    .sec-label {
+      display: flex; align-items: center; gap: 10px;
+      font-family: var(--mono); font-size: 11px; color: var(--hint);
+      letter-spacing: 0.1em; text-transform: uppercase;
+      margin: 2rem 0 1rem;
+    }
+    .sec-label::after { content: ''; flex: 1; height: 0.5px; background: var(--border); }
+
+    .achievement-list { list-style: none; display: flex; flex-direction: column; gap: 10px; margin-bottom: 1.5rem; }
+    .achievement-list li {
+      display: flex; align-items: flex-start; gap: 10px;
+      font-size: 14px; color: var(--text); line-height: 1.55;
+    }
+    .ach-icon { width: 16px; height: 16px; color: var(--green); flex-shrink: 0; margin-top: 3px; }
+
+    .prose { font-size: 15px; color: var(--text); line-height: 1.8; }
+    .prose p { margin-bottom: 1.1rem; }
+    .prose h2 {
+      font-family: var(--sans); font-size: 18px; font-weight: 500;
+      color: var(--text); margin: 2rem 0 0.75rem;
+    }
+    .prose h3 {
+      font-family: var(--sans); font-size: 15px; font-weight: 500;
+      color: var(--muted); margin: 1.5rem 0 0.5rem;
+    }
+    .prose code {
+      font-family: var(--mono); font-size: 13px;
+      background: var(--surface2); border: 0.5px solid var(--border2);
+      border-radius: 4px; padding: 2px 6px; color: var(--green);
+    }
+    .prose pre {
+      background: var(--surface); border: 0.5px solid var(--border2);
+      border-radius: 8px; padding: 1.25rem; overflow-x: auto;
+      font-family: var(--mono); font-size: 13px; color: var(--text);
+      margin: 1rem 0 1.5rem; line-height: 1.6;
+    }
+    .prose pre code { background: none; border: none; padding: 0; color: inherit; font-size: inherit; }
+    .prose a { color: var(--blue); text-decoration: none; }
+    .prose a:hover { text-decoration: underline; }
+    .prose ul, .prose ol { padding-left: 1.4rem; margin-bottom: 1rem; }
+    .prose li { margin-bottom: 0.35rem; }
+    .prose blockquote {
+      border-left: 3px solid var(--border2); padding-left: 1rem;
+      color: var(--muted); font-style: italic; margin: 1rem 0;
+    }
+    .prose figure { margin: 1.25rem 0 1.5rem; }
+    .prose figure img,
+    .prose figure video { width: 100%; border-radius: 8px; border: 0.5px solid var(--border2); display: block; }
+    .prose figure figcaption { font-family: var(--mono); font-size: 11px; color: var(--muted); margin-top: 6px; text-align: center; }
+    .media-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin: 1.25rem 0 1.5rem; align-items: start; }
+    .media-row figure { margin: 0; }
+    @media (max-width: 620px) { .media-row { grid-template-columns: 1fr; } }
+
+    .gallery-grid {
+      display: flex; gap: 10px; margin: 1.25rem 0 1.5rem;
+      overflow-x: auto; padding-bottom: 10px;
+      scrollbar-width: thin; scrollbar-color: var(--border2) transparent;
+    }
+    .gallery-grid figure { margin: 0; flex: 0 0 180px; }
+    .gallery-grid figure img { width: 180px; height: auto; }
+    .gallery-grid figcaption { font-family: var(--mono); font-size: 10px; color: var(--muted); margin-top: 5px; text-align: center; }
+    .gallery-grid::-webkit-scrollbar { height: 6px; }
+    .gallery-grid::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
+    .gallery-grid::-webkit-scrollbar-track { background: transparent; }
+
+
+    .data-table { width: 100%; border-collapse: collapse; margin: 1rem 0 1.5rem; font-family: var(--mono); font-size: 12px; }
+    .data-table th { color: var(--hint); text-align: left; padding: 0 0.6rem 0.5rem; border-bottom: 0.5px solid var(--border2); font-weight: 500; }
+    .data-table td { padding: 0.4rem 0.6rem; border-bottom: 0.5px solid var(--border); color: var(--text); }
+    .data-table tr:last-child td { border-bottom: none; }
+    .data-table td.clipped { color: var(--red); }
+    .data-table td.ok { color: var(--green); }
+
+    .formula {
+      background: var(--surface); border: 0.5px solid var(--border2); border-radius: 8px;
+      padding: 1.1rem 1.25rem; margin: 1rem 0 1.5rem;
+      font-family: var(--sans); font-style: italic; font-size: 17px; color: var(--text);
+      text-align: center; line-height: 2.2; overflow-x: auto;
+    }
+    .formula .step { display: block; white-space: nowrap; }
+    .formula .step + .step { margin-top: 4px; }
+    .formula .to { font-style: normal; color: var(--muted); margin: 0 10px; }
+    .formula sub { font-style: normal; }
+
+    .video-note {
+      background: var(--surface); border: 0.5px solid var(--border);
+      border-radius: 10px; margin: 1.25rem 0 1.5rem; overflow: hidden;
+    }
+    .video-note summary {
+      display: flex; align-items: center; gap: 8px;
+      padding: 0.85rem 1.1rem; cursor: pointer; user-select: none;
+      font-family: var(--mono); font-size: 13px; color: var(--text);
+      list-style: none;
+    }
+    .video-note summary::-webkit-details-marker { display: none; }
+    .video-note summary:hover { color: var(--green); }
+    .video-note-arrow { width: 14px; height: 14px; color: var(--muted); flex-shrink: 0; transition: transform 0.2s ease, color 0.2s ease; }
+    .video-note[open] .video-note-arrow { transform: rotate(90deg); color: var(--green); }
+    .video-note video {
+      display: block; width: 100%;
+      border-top: 0.5px solid var(--border);
+    }
+
+    .cards-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 1.5rem; }
+    @media (max-width: 540px) { .cards-row { grid-template-columns: 1fr; } }
+    .mini-card {
+      background: var(--surface); border: 0.5px solid var(--border);
+      border-radius: 10px; padding: 1rem;
+    }
+    .mini-card-label {
+      font-family: var(--mono); font-size: 10px; color: var(--hint);
+      letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 8px;
+    }
+    .mini-card-body { font-size: 13px; color: var(--text); line-height: 1.5; }
+
+    .plan-table {
+      width: 100%; border-collapse: collapse; margin: 1rem 0 1.5rem;
+      font-size: 13px;
+    }
+    .plan-table th {
+      font-family: var(--mono); font-size: 10px; color: var(--hint);
+      letter-spacing: 0.08em; text-transform: uppercase;
+      text-align: left; padding: 0 0.75rem 0.6rem;
+      border-bottom: 0.5px solid var(--border2);
+    }
+    .plan-table td {
+      padding: 0.55rem 0.75rem;
+      border-bottom: 0.5px solid var(--border);
+      color: var(--text); vertical-align: top; line-height: 1.5;
+    }
+    .plan-table tr:last-child td { border-bottom: none; }
+    .plan-table td:first-child {
+      font-family: var(--mono); font-size: 12px;
+      color: var(--muted); white-space: nowrap;
+    }
+    .plan-table td.mono { font-family: var(--mono); font-size: 12px; }
+
+    .next-week {
+      background: var(--surface); border: 0.5px solid var(--border);
+      border-left: 3px solid var(--amber); border-radius: 10px;
+      padding: 1rem 1.25rem; margin-top: 2rem;
+    }
+    .next-label { font-family: var(--mono); font-size: 11px; color: var(--amber); margin-bottom: 8px; }
+    .next-text { font-size: 14px; color: var(--text); }
+    .next-week code { white-space: nowrap; }
+    .next-list { list-style: none; display: flex; flex-direction: column; gap: 6px; margin-top: 8px; }
+    .next-list li { display: flex; align-items: flex-start; gap: 8px; font-size: 14px; color: var(--text); }
+    .next-list li::before { content: '→'; color: var(--amber); font-family: var(--mono); font-size: 12px; margin-top: 2px; flex-shrink: 0; }
+
+    .post-nav {
+      display: flex; justify-content: space-between; align-items: center;
+      margin-top: 3rem; padding-top: 1.5rem;
+      border-top: 0.5px solid var(--border);
+      flex-wrap: wrap; gap: 1rem;
+    }
+    .nav-link {
+      display: inline-flex; align-items: center; gap: 6px;
+      font-family: var(--mono); font-size: 12px;
+      color: var(--muted); text-decoration: none;
+      transition: color 0.15s;
+    }
+    .nav-link:hover { color: var(--text); }
+    .nav-link svg { width: 14px; height: 14px; }
+    .nav-spacer { flex: 1; }
+
+    footer {
+      border-top: 0.5px solid var(--border);
+      padding-top: 1.5rem; margin-top: 2rem;
+      display: flex; justify-content: space-between; align-items: center;
+      flex-wrap: wrap; gap: 0.75rem;
+    }
+    .footer-left { font-family: var(--mono); font-size: 12px; color: var(--hint); }
+    .footer-right { display: flex; gap: 14px; }
+    .footer-right a {
+      color: var(--hint); text-decoration: none;
+      font-size: 12px; font-family: var(--mono); transition: color 0.15s;
+    }
+    .footer-right a:hover { color: var(--muted); }
+  </style>
+</head>
+<body>
+<div class="site">
+
+  <nav class="topbar">
+    <a class="back-link" href="index.html">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="15 18 9 12 15 6"/></svg>
+      Back to blog
+    </a>
+    <span class="topbar-brand">gsoc-2026 / agl / week-13</span>
+  </nav>
+
+  <header class="post-header">
+    <div class="post-eyebrow">Week 13 · GSoC 2026 · AGL</div>
+    <h1>Finding Every Box Without Being Told Where It Is</h1>
+    <div class="post-meta">
+      <span>Aug 18 – Aug 31, 2026</span>
+      <span>Abdulrahman</span>
+    </div>
+  </header>
+
+  <p class="sec-label">This week</p>
+
+  <ul class="achievement-list">
+    <li>
+      <svg class="ach-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="20 6 9 17 4 12"/></svg>
+      <span>Built <code>detect_spyder.py</code>: locates all 48 SpyderCheckr48 patches straight from the photo — no hand-clicked corners, no <code>--bbox</code>/<code>--corners</code> needed</span>
+    </li>
+    <li>
+      <svg class="ach-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="20 6 9 17 4 12"/></svg>
+      <span>Solved the two-panel separation problem with a clustering radius tuned between one patch's own pitch and the cross-hinge gap, so the two folded halves never merge into one blob</span>
+    </li>
+    <li>
+      <svg class="ach-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="20 6 9 17 4 12"/></svg>
+      <span>Fits one homography per panel from labelled squares instead of extrapolating rows from a few measured corners — the left panel is now found as directly and as accurately as the right</span>
+    </li>
+    <li>
+      <svg class="ach-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="20 6 9 17 4 12"/></svg>
+      <span>Self-corrects a card photographed upside down by checking that row 1 (white/light tints) is actually brighter than row 6 (blacks) — flips the grid 180° if not</span>
+    </li>
+  </ul>
+
+  <p class="sec-label">Details</p>
+
+  <div class="prose">
+
+    <h2>How the auto-detector finds all 48 boxes</h2>
+    <p>
+      Getting here went through two earlier stages first, each one solving the same underlying question —
+      where is a patch, actually — a little more directly than the last. First was discovering that
+      <code>ctt</code>'s own autolocator wasn't failing loudly on this card, it was succeeding quietly
+      against the wrong half of it:
+    </p>
+    <figure>
+      <img src="public/images/week-13/ctt-half-card-web.jpg" alt="ctt's detected chart vertices overlaid on the source photo, showing they only bound the right half of the physical SpyderCheckr48 card" />
+      <figcaption>ctt's own detected corners (red), overlaid on the source photo — they stop exactly at the hinge</figcaption>
+    </figure>
+    <p>
+      Hand-measuring the right panel's corners and deriving the left panel from them worked next, until the
+      card's physical fold made that single flat transform drift — worse the further a patch sat from the
+      two corners actually measured:
+    </p>
+    <div class="media-row">
+      <figure>
+        <img src="public/images/week-13/fold-bug-diagnostic-web.jpg" alt="Grid overlay showing the right panel's cells matching the true patches exactly, while the left panel's cells drift out of alignment" />
+        <figcaption>Right panel (anchored to real corners): exact. Left panel: drifting.</figcaption>
+      </figure>
+      <figure>
+        <img src="public/images/week-13/fold-bug-fixed-web.jpg" alt="After the fix: all patch labels correctly centered on both panels, with even spacing across the whole card" />
+        <figcaption>Fixed: same column width on both panels, points centered and evenly spaced</figcaption>
+      </figure>
+    </div>
+    <figure>
+      <img src="public/images/week-13/first-full-card-calibration-web.jpg" alt="All 48 patch labels correctly landing on their patches after manual corner calibration" />
+      <figcaption>The first fully-verified calibration from that fix — all 48 patches, both panels, correctly labeled</figcaption>
+    </figure>
+    <p>
+      That got every patch located correctly, but still only with a person clicking the right panel's
+      corners on every capture. <code>detect_spyder.py</code> is the next step past that: the same "where is
+      each patch" question, now answered directly from the photo — no hands involved — in four steps.
+    </p>
+
+    <h3>1. Find every patch-shaped square in the frame</h3>
+    <p>
+      A Canny edge pass (auto-thresholded off the image's own median brightness, so it isn't tuned to one
+      lighting setup) over the whole photo, then every contour gets filtered down hard before it's trusted
+      as a real patch: must simplify to exactly 4 convex corners, sides within
+      <code>0.014×width</code>–<code>0.075×width</code> long, roughly equal on all four sides (shortest ≥
+      62% of the longest — rules out anything sheared or foreshortened past what a patch actually looks
+      like), and filled (contour area ≥ 60% of side²). Then one more check on what's actually inside the
+      box: sampled at its centre, it has to be either flat and low-texture (a gray patch) or strongly
+      saturated (a colour patch) — never both textured <em>and</em> weak-colour at once. That last rule is
+      what throws out the wood-grain panelling and the hand holding the card, both of which pass every
+      geometric check but fail this one.
+    </p>
+
+    <h3>2. Cluster into two panels</h3>
+    <p>
+      The surviving squares get linked into groups by a union-find over pairwise distance, with the link
+      radius set to <code>1.9×</code> the median patch size — comfortably more than one patch's own pitch
+      (so neighbouring patches within a panel do link up), but well under the gap across the hinge (so the
+      two panels never merge into one blob). Left cluster becomes columns A-D, right becomes E-H, sorted by
+      centroid x — that separation is what keeps column D from ever getting pulled in as if it were column
+      E, which used to be a real failure mode.
+    </p>
+
+    <h3>3. Label the squares, fit one homography, fix upside-down</h3>
+    <p>
+      Each cluster gets rotated flat by its own squares' median tilt angle, deduplicated (a patch is often
+      found twice — inner and outer contour — so points closer than half a patch-width get merged), and the
+      true patch pitch is read off as the median nearest-neighbour distance. Dividing every point's position
+      by that pitch and rounding gives each square an integer <code>(col, row)</code> — then one homography
+      is least-squares fit (RANSAC-scored) from those integer indices straight to pixel coordinates. Finally,
+      orientation gets pinned by something the geometry alone can't tell you: row 1 has to be
+      <em>brighter</em> than row 6, because that's genuinely true of this card (white/light tints on top,
+      blacks on the bottom) — if a panel comes back the wrong way round, its grid gets turned 180°.
+    </p>
+
+    <h3>4. Every centre comes from the same fit — nothing is walked from a neighbour</h3>
+    <p>
+      Because the whole panel is fit as one 4×6 lattice at once, a patch's centre is just
+      <code>homography × (col, row)</code> directly — rows 2 through 6 aren't derived by stepping down from
+      row 1, they're read off the same fitted transform row 1 was. That's the actual fix for the fold: the
+      old approach anchored to the right panel's corners and then walked the left panel out from the hinge,
+      one column-width step at a time, which is exactly what let error compound the further a patch sat from
+      the two corners that were actually measured. Fitting the left panel's own squares directly means it no
+      longer borrows the right panel's geometry at all — each panel answers for its own patches.
+    </p>
+    <p>
+      Grey: every square candidate found. Orange/cyan: the two panels' chosen clusters. Yellow: each
+      panel's fitted patch area. Green: row 1. Red: every other centre. Same detector, same settings, run
+      against one real capture at each of the four colour temperatures actually shot this project —
+      3200K/4200K/5200K/6500K — with nothing hand-tuned between them:
+    </p>
+    <div class="media-row">
+      <figure>
+        <img src="public/images/week-13/box-detect-6500k-web.jpg" alt="detect_spyder.py debug overlay on a 6500K SpyderCheckr48 capture, both panels correctly detected" />
+        <figcaption>6500K — right inliers 20/24, left 18/24</figcaption>
+      </figure>
+      <figure>
+        <img src="public/images/week-13/box-detect-5200k-web.jpg" alt="detect_spyder.py debug overlay on a 5200K SpyderCheckr48 capture, both panels correctly detected" />
+        <figcaption>5200K — right inliers 20/24, left 19/24</figcaption>
+      </figure>
+    </div>
+    <div class="media-row">
+      <figure>
+        <img src="public/images/week-13/box-detect-4200k-web.jpg" alt="detect_spyder.py debug overlay on a 4200K SpyderCheckr48 capture, both panels correctly detected" />
+        <figcaption>4200K — right inliers 20/24, left 18/24</figcaption>
+      </figure>
+      <figure>
+        <img src="public/images/week-13/box-detect-3200k-web.jpg" alt="detect_spyder.py debug overlay on a 3200K SpyderCheckr48 capture, both panels correctly detected" />
+        <figcaption>3200K — right inliers 20/24, left 18/24</figcaption>
+      </figure>
+    </div>
+    <p>
+      On that capture both panels came back clean: 20 of 24 right-panel squares and 18 of 24 left-panel
+      squares scored as homography inliers, neither panel flagged as flipped. A couple of extra checks keep
+      this from going wrong quietly — each panel's fitted quad has to have a plausible aspect ratio
+      (~1.5, patch-grid-shaped, not some stray rectangle), and the two panels have to sit at roughly the same
+      scale and height as each other, or whatever the second-largest cluster was (a shelf edge, a shadow
+      boundary) gets rejected instead of being mistaken for the missing panel. When only one panel is found,
+      the pipeline still has somewhere to fall back to — the older hinge-derivation approach (walking the
+      right panel's own column-width vector across the fold) — just no longer as the primary method.
+    </p>
+
+    <h2>What white balance is actually solving for</h2>
+    <p>
+      Worth being precise about this before going further, because there are two different things "make it
+      neutral" could mean, and the pipeline does the stricter one. A real camera's onboard auto-white-balance
+      only ever aims at the first: it has no ground truth, so it just assumes something in the scene
+      <em>is</em> neutral and forces that to read R=G=B — internally consistent, but blind to whether the
+      result is actually correct. <code>solve_wb_gain</code> aims at the second: it fits each channel's gain
+      so the camera's own reading of the chart's D/E gray-ramp patches lands as close as possible — real
+      least-squares, not just a ratio — to that exact patch's <em>actual, industry-measured reference
+      value</em>, not merely "equal to its other two channels":
+    </p>
+    <div class="formula">
+      <span class="step">g<sub>c</sub> = &Sigma;<sub>i</sub> m<sub>i,c</sub>&middot;r<sub>i,c</sub> &nbsp;/&nbsp; &Sigma;<sub>i</sub> m<sub>i,c</sub>&sup2;</span>
+    </div>
+    <pre><code>m, r = cam_lin[idx], ref_lin[idx]        # m = camera's own reading, r = the chart's real measured value
+gain = (m * r).sum(axis=0) / (m * m).sum(axis=0)   # per channel, least-squares</code></pre>
+    <p>
+      <em>g<sub>c</sub></em> is the gain for channel <em>c</em> (R, G or B), computed independently per
+      channel; <em>i</em> ranges over the 3-6 neutral patches actually used. That's the closed-form solution
+      to the least-squares scalar fit — the single gain that minimises squared error against the reference —
+      reached by setting the derivative of the error to zero and solving, not an approximation.
+      <code>idx</code> is <code>WB_NEUTRAL_LABELS = ['3D','4D','5D','3E','4E','5E']</code> — the D/E gray
+      ramp's <em>middle</em> three rows specifically, not all six: rows 1-2 are excluded because they're
+      almost always clipped (the chart's own brightest neutrals, see below), row 6 is excluded for the
+      opposite reason — too little signal, noise-dominated. Whichever of those six are still sensor-clipped
+      in a given capture get dropped from the fit too, live, on top of that fixed list.
+    </p>
+    <p>
+      That distinction is why the reference chart is needed at all rather than trusting the camera's own
+      guess: the reference has real, calibrated numbers behind it. It also means the target isn't a
+      mathematically perfect gray — the chart's own patches aren't exactly equal-channel either (patch
+      <code>4D</code>'s true value is <code>[139,136,135]</code>, not <code>[137,137,137]</code>) — so the
+      fit reproduces that tiny real bias rather than flattening it away.
+    </p>
+    <p>Real numbers, one full capture (6500K), gain <code>[R=0.6067, G=0.312, B=0.4118]</code>:</p>
+    <div style="overflow-x:auto;">
+    <table class="data-table">
+      <tr><th>patch</th><th>raw (R, G, B)</th><th>after WB gain</th><th>spread</th><th>clipped?</th></tr>
+      <tr><td>1D</td><td>0.861, 1.000, 1.000</td><td>0.522, 0.312, 0.412</td><td>0.210</td><td class="clipped">yes</td></tr>
+      <tr><td>2D</td><td>0.922, 1.000, 1.000</td><td>0.560, 0.312, 0.412</td><td>0.248</td><td class="clipped">yes</td></tr>
+      <tr><td>3D</td><td>0.675, 1.000, 0.918</td><td>0.410, 0.312, 0.378</td><td>0.098</td><td class="clipped">yes</td></tr>
+      <tr><td>4D</td><td>0.447, 0.814, 0.593</td><td>0.271, 0.254, 0.244</td><td>0.027</td><td class="ok">no</td></tr>
+      <tr><td>5D</td><td>0.265, 0.470, 0.337</td><td>0.160, 0.146, 0.139</td><td>0.022</td><td class="ok">no</td></tr>
+      <tr><td>6D</td><td>0.138, 0.242, 0.176</td><td>0.084, 0.075, 0.072</td><td>0.011</td><td class="ok">no</td></tr>
+      <tr><td>1E</td><td>0.934, 1.000, 1.000</td><td>0.567, 0.312, 0.412</td><td>0.255</td><td class="clipped">yes</td></tr>
+      <tr><td>2E</td><td>0.726, 1.000, 1.000</td><td>0.440, 0.312, 0.412</td><td>0.128</td><td class="clipped">yes</td></tr>
+      <tr><td>3E</td><td>0.513, 0.974, 0.716</td><td>0.311, 0.304, 0.295</td><td>0.016</td><td class="ok">no</td></tr>
+      <tr><td>4E</td><td>0.331, 0.614, 0.453</td><td>0.201, 0.192, 0.187</td><td>0.014</td><td class="ok">no</td></tr>
+      <tr><td>5E</td><td>0.190, 0.345, 0.254</td><td>0.115, 0.108, 0.105</td><td>0.011</td><td class="ok">no</td></tr>
+      <tr><td>6E</td><td>0.106, 0.192, 0.144</td><td>0.065, 0.060, 0.059</td><td>0.005</td><td class="ok">no</td></tr>
+    </table>
+    </div>
+    <p>
+      <strong>"Spread"</strong> is <code>max(R,G,B) − min(R,G,B)</code> after white balance — zero would be
+      perfectly neutral. Every unclipped patch (4D-6D, 3E-6E) lands within 0.03 of neutral. Every clipped one
+      is off by 0.1-0.25 — visibly, not marginally.
+    </p>
+
+    <h3>Why 1D, 2D, 1E, 2E turn pink or purple</h3>
+    <p>
+      Look at what's actually stored for <code>1D</code>: <code>R=0.861, G=1.000, B=1.000</code>. That's the
+      sensor's photosite filling up — green and blue hit the ceiling and the file simply cannot record
+      whether the true value was 1.01 or 1.8, it just reports "at least this much." Red never reached the
+      ceiling on this patch, so it's still a real, honest reading. Multiply all three by the gain and the
+      damage is visible directly: <code>0.522, 0.312, 0.412</code> — R is nearly double G. Red-heavy,
+      green-deficient reads exactly as the pink/magenta cast you can see on the chart.
+    </p>
+    <p>
+      <code>3D</code> is the borderline case worth knowing about, because it shows this isn't a fixed "always
+      exactly 4 patches" rule — it's whatever the actual light levels happened to be in that specific shot.
+      Here <code>3D</code> clips too (green pinned at 1.000) while <code>3E</code>, one row over, doesn't —
+      same nominal brightness level, different actual result, because the two panels don't reflect back
+      identical amounts of light. The clip boundary moves capture to capture; the fix (excluding clipped
+      patches from the fit, or forcing them neutral with <code>dehue_highlights</code>) has to work
+      per-capture, not off a fixed patch list.
+    </p>
+
+    <h2>The colour correction (CCM) algorithm, and which boxes feed it</h2>
+    <p>
+      Different algorithm from white balance, not the same one applied twice. WB is 3 independent scalars,
+      one per channel — it can't mix channels. The CCM is a full, unconstrained 3×3 matrix, solved by
+      ordinary least squares, with <strong>no bias/offset term</strong> — forced through the origin on
+      purpose:
+    </p>
+    <div class="formula">
+      <span class="step">X = (A<sup>T</sup>WA)<sup>&minus;1</sup>A<sup>T</sup>WB</span>
+    </div>
+    <pre><code>A, B = cam_lin[selected], ref_lin[selected]        # only the patches chosen below, un-clipped
+if w is not None:                                  # optional per-patch weight
+    s = sqrt(w)[:, None]
+    A, B = A * s, B * s
+X, *_ = np.linalg.lstsq(A, B, rcond=None)          # solves argmin ||A @ X − B||²
+# apply as: corrected = [R,G,B] @ X</code></pre>
+    <p>
+      <em>m<sub>i</sub></em>/<em>r<sub>i</sub></em> are one patch's measured/reference colour as a 1×3 row,
+      <em>X</em> is the 3×3 matrix being solved for, <em>W</em> is the diagonal matrix of per-patch weights
+      (<em>w<sub>i</sub></em>=0 for anything not selected). Same shape of problem as WB — least squares
+      against the reference — just fitting a full matrix instead of 3 independent scalars, which is what
+      lets it mix channels and correct actual colour, not just brightness per channel. In practice
+      <code>np.linalg.lstsq</code> solves it via SVD rather than literally inverting <em>A<sup>T</sup>WA</em>
+      (more numerically stable when patches are close to collinear — see the neutral-only matrix attempt
+      earlier, which hit exactly that failure mode), but the two are mathematically the same answer.
+    </p>
+    <p>
+      No bias term is a deliberate choice, not a missing feature: a free offset would let the fit shave a
+      little error off the patches by shifting the whole image's black point, but that same offset then adds
+      to every pixel in the corrected photo — lifting shadows off true black and blowing out more
+      highlights. In linear light there's a stronger reason too: zero photons in has to mean zero photons
+      out, so the fit should pass through the origin exactly, not approximately.
+    </p>
+    <p>
+      Which patches get a say in that fit — and how much of one — is <code>FIT_WEIGHTS</code>:
+    </p>
+    <pre><code>FIT_WEIGHTS = {
+    # D, E columns -- the full 6-row gray ramp, weight 1.0 each
+    '1D':1.0, '2D':1.0, '3D':1.0, '4D':1.0, '5D':1.0, '6D':1.0,
+    '1E':1.0, '2E':1.0, '3E':1.0, '4E':1.0, '5E':1.0, '6E':1.0,
+    # F column -- the chart's secondary colours (cyan, magenta, yellow), moderate weight
+    '1F':1.5, '2F':1.5, '3F':1.5,
+    # F column -- the pure red/green/blue primaries, heaviest weight
+    '4F':3.0, '5F':3.0, '6F':3.0,
+}</code></pre>
+    <p>
+      Only columns D, E and F — 18 patches at most, usually fewer once whatever's sensor-clipped in that
+      specific capture gets dropped (typically 6-9 survive). D+E anchor the achromatic axis (the same gray
+      ramp WB uses, but here all 6 rows rather than just the middle 3 — WB needs a narrower, safer slice to
+      average; the CCM fit just drops whichever ones happen to be clipped instead). F carries the fully
+      saturated colours, R/G/B weighted twice as heavily as C/M/Y specifically to prioritise the primaries.
+      Every other column — A, B, C, G, H, roughly 30 patches — is <em>not</em> in the fit at all; the
+      original reasoning (documented in the code) was that they sit inside the span of what D/E/F already
+      constrain, so they'd fall into place without needing to be fit directly. The <code>A6</code>/<code>C1</code>/<code>C2</code>
+      investigation above is a real instance of that assumption not always holding.
+    </p>
+
+    <h2>Every condition this rig actually shot, all four processing phases</h2>
+    <p>
+      All 14 real lighting conditions behind every number on this page — 4 colour temperatures
+      (3200/4200/5200/6500K), 2500-20000 lux each — each one run through all four phases: the raw capture
+      with nothing done to it yet, after white balance alone, after the full pipeline (CCM + highlight
+      de-hue), and the real on-camera JPEG for comparison. One row per phase, scroll right within a row to
+      see every condition. One of the 15 raw sessions was the same 5200K/12000lux condition shot twice, so
+      it collapses to one column here; one (3200K/2500lux) only has a camera1 capture, so that's the one
+      shown for it. All 14 detected both chart panels automatically, no manual corners needed for any of
+      them.
+    </p>
+    <h3>How each shot was actually taken</h3>
+    <p>
+      Every capture in this whole set comes from one script running on the Pi 5 itself, firing both
+      IMX219s at once:
+    </p>
+    <pre><code>W=1640            # match your calibration resolution
+H=1232
+SETTLE=2000       # ms for AE/AWB to settle before the still
+DUR=30000         # ms of video
+
+SESSION="captures/$(date +%Y%m%d_%H%M%S)"
+mkdir -p "$SESSION"
+
+# 1) stills first — this is what align_overlap.py reads
+sleep 5
+rpicam-still -n --camera 0 \
+    --width 3280 --height 2464 --quality 100 \
+    -r -o $SESSION/camera0.jpg &&
+rpicam-still -n --camera 1 \
+    --width 3280 --height 2464 --quality 100 \
+    -r -o $SESSION/camera1.jpg</code></pre>
+    <p>
+      The one flag that matters most for everything on this page is <code>-r</code> — that's what makes
+      <code>rpicam-still</code> save a <code>.dng</code> alongside the <code>.jpg</code> for every shot,
+      which is the only reason a "raw, ISP-bypassed" phase is possible to show at all. Full sensor
+      resolution (<code>3280×2464</code>, not the <code>1640×1232</code> the variables at the top suggest —
+      those set up a different, faster preview mode this script doesn't actually call), max JPEG quality so
+      the on-camera comparison image isn't its own extra source of loss, both cameras fired back to back in
+      one run, and every session written to its own timestamp-named folder so re-running never clobbers a
+      previous one. The script itself only stamps the timestamp (<code>captures/YYYYMMDD_HHMMSS/</code>) —
+      the <code>_&lt;ct&gt;k_&lt;lux&gt;l</code> suffix used throughout the rest of this project gets
+      appended afterward, from the room's actual measured colour temperature and lux at the time of that
+      session.
+    </p>
+
+    <h3>1. Raw — straight off the sensor</h3>
+    <p>
+      Every capture is a <code>.dng</code>, read with the camera's onboard ISP completely bypassed —
+      <code>rawpy</code>'s own auto white balance and auto brightness are both explicitly switched off
+      (<code>use_camera_wb=False, use_auto_wb=False, no_auto_bright=True</code>), and it's decoded in the
+      sensor's own native colour space (<code>output_color=rawpy.ColorSpace.raw</code>), not converted
+      through any camera colour matrix. So "raw" here really does mean the sensor's linear response with
+      nothing done to it — the only two things that happen at all are demosaicing (turning the Bayer mosaic
+      into RGB pixels in the first place, unavoidable to display it as a photo) and, purely so it's viewable
+      on a screen, the sRGB gamma curve applied for display. No white balance, no exposure compensation, no
+      colour correction, no tone curve. That's what the strong green cast in every image in this row is —
+      the sensor's actual, uncorrected colour response to this light, before anything downstream touches it.
+    </p>
+    <div class="gallery-grid">
+      <figure><img src="public/images/week-13/phases/6500k_8800l_camera0_1raw.jpg" alt="6500K 8800lux raw demosaic, no correction" /><figcaption>6500K &middot; 8800l</figcaption></figure>
+      <figure><img src="public/images/week-13/phases/6500k_14600l_camera0_1raw.jpg" alt="6500K 14600lux raw demosaic, no correction" /><figcaption>6500K &middot; 14600l</figcaption></figure>
+      <figure><img src="public/images/week-13/phases/6500k_15000l_camera0_1raw.jpg" alt="6500K 15000lux raw demosaic, no correction" /><figcaption>6500K &middot; 15000l</figcaption></figure>
+      <figure><img src="public/images/week-13/phases/5200k_4500l_camera0_1raw.jpg" alt="5200K 4500lux raw demosaic, no correction" /><figcaption>5200K &middot; 4500l</figcaption></figure>
+      <figure><img src="public/images/week-13/phases/5200k_12000l_camera0_1raw.jpg" alt="5200K 12000lux raw demosaic, no correction" /><figcaption>5200K &middot; 12000l</figcaption></figure>
+      <figure><img src="public/images/week-13/phases/5200k_20000l_camera0_1raw.jpg" alt="5200K 20000lux raw demosaic, no correction" /><figcaption>5200K &middot; 20000l</figcaption></figure>
+      <figure><img src="public/images/week-13/phases/4200k_3500l_camera0_1raw.jpg" alt="4200K 3500lux raw demosaic, no correction" /><figcaption>4200K &middot; 3500l</figcaption></figure>
+      <figure><img src="public/images/week-13/phases/4200k_7300l_camera0_1raw.jpg" alt="4200K 7300lux raw demosaic, no correction" /><figcaption>4200K &middot; 7300l</figcaption></figure>
+      <figure><img src="public/images/week-13/phases/4200k_15000l_camera0_1raw.jpg" alt="4200K 15000lux raw demosaic, no correction" /><figcaption>4200K &middot; 15000l</figcaption></figure>
+      <figure><img src="public/images/week-13/phases/3200k_2500l_camera1_1raw.jpg" alt="3200K 2500lux raw demosaic, no correction" /><figcaption>3200K &middot; 2500l (cam1)</figcaption></figure>
+      <figure><img src="public/images/week-13/phases/3200k_3700l_camera0_1raw.jpg" alt="3200K 3700lux raw demosaic, no correction" /><figcaption>3200K &middot; 3700l</figcaption></figure>
+      <figure><img src="public/images/week-13/phases/3200k_7500l_camera0_1raw.jpg" alt="3200K 7500lux raw demosaic, no correction" /><figcaption>3200K &middot; 7500l</figcaption></figure>
+      <figure><img src="public/images/week-13/phases/3200k_9000l_camera0_1raw.jpg" alt="3200K 9000lux raw demosaic, no correction" /><figcaption>3200K &middot; 9000l</figcaption></figure>
+      <figure><img src="public/images/week-13/phases/3200k_10800l_camera0_1raw.jpg" alt="3200K 10800lux raw demosaic, no correction" /><figcaption>3200K &middot; 10800l</figcaption></figure>
+    </div>
+
+    <h3>2. White balance</h3>
+    <div class="gallery-grid">
+      <figure><img src="public/images/week-13/phases/6500k_8800l_camera0_2wb.jpg" alt="6500K 8800lux after white balance" /><figcaption>6500K &middot; 8800l</figcaption></figure>
+      <figure><img src="public/images/week-13/phases/6500k_14600l_camera0_2wb.jpg" alt="6500K 14600lux after white balance" /><figcaption>6500K &middot; 14600l</figcaption></figure>
+      <figure><img src="public/images/week-13/phases/6500k_15000l_camera0_2wb.jpg" alt="6500K 15000lux after white balance" /><figcaption>6500K &middot; 15000l</figcaption></figure>
+      <figure><img src="public/images/week-13/phases/5200k_4500l_camera0_2wb.jpg" alt="5200K 4500lux after white balance" /><figcaption>5200K &middot; 4500l</figcaption></figure>
+      <figure><img src="public/images/week-13/phases/5200k_12000l_camera0_2wb.jpg" alt="5200K 12000lux after white balance" /><figcaption>5200K &middot; 12000l</figcaption></figure>
+      <figure><img src="public/images/week-13/phases/5200k_20000l_camera0_2wb.jpg" alt="5200K 20000lux after white balance" /><figcaption>5200K &middot; 20000l</figcaption></figure>
+      <figure><img src="public/images/week-13/phases/4200k_3500l_camera0_2wb.jpg" alt="4200K 3500lux after white balance" /><figcaption>4200K &middot; 3500l</figcaption></figure>
+      <figure><img src="public/images/week-13/phases/4200k_7300l_camera0_2wb.jpg" alt="4200K 7300lux after white balance" /><figcaption>4200K &middot; 7300l</figcaption></figure>
+      <figure><img src="public/images/week-13/phases/4200k_15000l_camera0_2wb.jpg" alt="4200K 15000lux after white balance" /><figcaption>4200K &middot; 15000l</figcaption></figure>
+      <figure><img src="public/images/week-13/phases/3200k_2500l_camera1_2wb.jpg" alt="3200K 2500lux after white balance" /><figcaption>3200K &middot; 2500l (cam1)</figcaption></figure>
+      <figure><img src="public/images/week-13/phases/3200k_3700l_camera0_2wb.jpg" alt="3200K 3700lux after white balance" /><figcaption>3200K &middot; 3700l</figcaption></figure>
+      <figure><img src="public/images/week-13/phases/3200k_7500l_camera0_2wb.jpg" alt="3200K 7500lux after white balance" /><figcaption>3200K &middot; 7500l</figcaption></figure>
+      <figure><img src="public/images/week-13/phases/3200k_9000l_camera0_2wb.jpg" alt="3200K 9000lux after white balance" /><figcaption>3200K &middot; 9000l</figcaption></figure>
+      <figure><img src="public/images/week-13/phases/3200k_10800l_camera0_2wb.jpg" alt="3200K 10800lux after white balance" /><figcaption>3200K &middot; 10800l</figcaption></figure>
+    </div>
+
+    <h3>3. CCM applied</h3>
+    <div class="gallery-grid">
+      <figure><img src="public/images/week-13/phases/6500k_8800l_camera0_3ccm.jpg" alt="6500K 8800lux after CCM applied" /><figcaption>6500K &middot; 8800l</figcaption></figure>
+      <figure><img src="public/images/week-13/phases/6500k_14600l_camera0_3ccm.jpg" alt="6500K 14600lux after CCM applied" /><figcaption>6500K &middot; 14600l</figcaption></figure>
+      <figure><img src="public/images/week-13/phases/6500k_15000l_camera0_3ccm.jpg" alt="6500K 15000lux after CCM applied" /><figcaption>6500K &middot; 15000l</figcaption></figure>
+      <figure><img src="public/images/week-13/phases/5200k_4500l_camera0_3ccm.jpg" alt="5200K 4500lux after CCM applied" /><figcaption>5200K &middot; 4500l</figcaption></figure>
+      <figure><img src="public/images/week-13/phases/5200k_12000l_camera0_3ccm.jpg" alt="5200K 12000lux after CCM applied" /><figcaption>5200K &middot; 12000l</figcaption></figure>
+      <figure><img src="public/images/week-13/phases/5200k_20000l_camera0_3ccm.jpg" alt="5200K 20000lux after CCM applied" /><figcaption>5200K &middot; 20000l</figcaption></figure>
+      <figure><img src="public/images/week-13/phases/4200k_3500l_camera0_3ccm.jpg" alt="4200K 3500lux after CCM applied" /><figcaption>4200K &middot; 3500l</figcaption></figure>
+      <figure><img src="public/images/week-13/phases/4200k_7300l_camera0_3ccm.jpg" alt="4200K 7300lux after CCM applied" /><figcaption>4200K &middot; 7300l</figcaption></figure>
+      <figure><img src="public/images/week-13/phases/4200k_15000l_camera0_3ccm.jpg" alt="4200K 15000lux after CCM applied" /><figcaption>4200K &middot; 15000l</figcaption></figure>
+      <figure><img src="public/images/week-13/phases/3200k_2500l_camera1_3ccm.jpg" alt="3200K 2500lux after CCM applied" /><figcaption>3200K &middot; 2500l (cam1)</figcaption></figure>
+      <figure><img src="public/images/week-13/phases/3200k_3700l_camera0_3ccm.jpg" alt="3200K 3700lux after CCM applied" /><figcaption>3200K &middot; 3700l</figcaption></figure>
+      <figure><img src="public/images/week-13/phases/3200k_7500l_camera0_3ccm.jpg" alt="3200K 7500lux after CCM applied" /><figcaption>3200K &middot; 7500l</figcaption></figure>
+      <figure><img src="public/images/week-13/phases/3200k_9000l_camera0_3ccm.jpg" alt="3200K 9000lux after CCM applied" /><figcaption>3200K &middot; 9000l</figcaption></figure>
+      <figure><img src="public/images/week-13/phases/3200k_10800l_camera0_3ccm.jpg" alt="3200K 10800lux after CCM applied" /><figcaption>3200K &middot; 10800l</figcaption></figure>
+    </div>
+
+    <h3>4. Real on-camera JPEG</h3>
+    <div class="gallery-grid">
+      <figure><img src="public/images/week-13/gallery/6500k_8800l_camera0.jpg" alt="6500K 8800lux real on-camera JPEG" /><figcaption>6500K &middot; 8800l</figcaption></figure>
+      <figure><img src="public/images/week-13/gallery/6500k_14600l_camera0.jpg" alt="6500K 14600lux real on-camera JPEG" /><figcaption>6500K &middot; 14600l</figcaption></figure>
+      <figure><img src="public/images/week-13/gallery/6500k_15000l_camera0.jpg" alt="6500K 15000lux real on-camera JPEG" /><figcaption>6500K &middot; 15000l</figcaption></figure>
+      <figure><img src="public/images/week-13/gallery/5200k_4500l_camera0.jpg" alt="5200K 4500lux real on-camera JPEG" /><figcaption>5200K &middot; 4500l</figcaption></figure>
+      <figure><img src="public/images/week-13/gallery/5200k_12000l_camera0.jpg" alt="5200K 12000lux real on-camera JPEG" /><figcaption>5200K &middot; 12000l</figcaption></figure>
+      <figure><img src="public/images/week-13/gallery/5200k_20000l_camera0.jpg" alt="5200K 20000lux real on-camera JPEG" /><figcaption>5200K &middot; 20000l</figcaption></figure>
+      <figure><img src="public/images/week-13/gallery/4200k_3500l_camera0.jpg" alt="4200K 3500lux real on-camera JPEG" /><figcaption>4200K &middot; 3500l</figcaption></figure>
+      <figure><img src="public/images/week-13/gallery/4200k_7300l_camera0.jpg" alt="4200K 7300lux real on-camera JPEG" /><figcaption>4200K &middot; 7300l</figcaption></figure>
+      <figure><img src="public/images/week-13/gallery/4200k_15000l_camera0.jpg" alt="4200K 15000lux real on-camera JPEG" /><figcaption>4200K &middot; 15000l</figcaption></figure>
+      <figure><img src="public/images/week-13/gallery/3200k_2500l_camera1.jpg" alt="3200K 2500lux real on-camera JPEG" /><figcaption>3200K &middot; 2500l (cam1)</figcaption></figure>
+      <figure><img src="public/images/week-13/gallery/3200k_3700l_camera0.jpg" alt="3200K 3700lux real on-camera JPEG" /><figcaption>3200K &middot; 3700l</figcaption></figure>
+      <figure><img src="public/images/week-13/gallery/3200k_7500l_camera0.jpg" alt="3200K 7500lux real on-camera JPEG" /><figcaption>3200K &middot; 7500l</figcaption></figure>
+      <figure><img src="public/images/week-13/gallery/3200k_9000l_camera0.jpg" alt="3200K 9000lux real on-camera JPEG" /><figcaption>3200K &middot; 9000l</figcaption></figure>
+      <figure><img src="public/images/week-13/gallery/3200k_10800l_camera0.jpg" alt="3200K 10800lux real on-camera JPEG" /><figcaption>3200K &middot; 10800l</figcaption></figure>
+    </div>
+
+    <h2>A6, C1, C2: a different kind of corrupted colour</h2>
+    <p>
+      Separately from the D/E highlight problem, three other patches — <code>A6</code> ("low-sat magenta"),
+      <code>C1</code> ("lightest skin"), <code>C2</code> ("lighter skin") — kept coming out visibly wrong
+      too. Chasing this one took several wrong guesses before finding the real cause, worth walking through
+      honestly rather than just stating the answer, because the wrong guesses are exactly where the mistakes
+      were.
+    </p>
+
+    <h3>First guess: they're outside the fit entirely</h3>
+    <p>
+      Structurally true, and easy to confirm: the CCM is only ever fit against columns D, E and F —
+      <code>A</code> and <code>C</code> are never included, clipped or not. So the obvious first thing to
+      try was adding them in. A 4-capture test looked like a clear win. Testing it properly across all 14
+      captures told a different story — overall accuracy actually got *worse* in 8 of the 14 (the
+      regressions clustered in 4200K/3200K specifically), and <code>A6</code>'s own error, while it improved
+      on paper in all 14, turned out not to mean much:
+    </p>
+    <div class="media-row">
+      <figure>
+        <img src="public/images/week-13/a6-baseline-vs-expanded-before-web.jpg" alt="Patch A6 rendered with the baseline CCM fit (D/E/F columns only)" />
+        <figcaption>Baseline fit — error 0.439</figcaption>
+      </figure>
+      <figure>
+        <img src="public/images/week-13/a6-baseline-vs-expanded-after-web.jpg" alt="Patch A6 rendered with columns A and C added to the CCM fit" />
+        <figcaption>A+C added to the fit — error 0.278 ("better"), looks the same</figcaption>
+      </figure>
+    </div>
+    <p>
+      That's a real error-number improvement next to two crops that are visually indistinguishable. The
+      lesson: a smaller Euclidean colour-error number doesn't guarantee a visible fix, and it's worth looking
+      at the actual pixels before believing a metric — the 14-capture regression on overall accuracy plus
+      this non-improvement is why this fix didn't ship.
+    </p>
+
+    <h3>Second guess: the fit is chasing the red primary too hard</h3>
+    <p>
+      Printing the actual CCM matrix showed a steep R-row (<code>[2.804, -0.592, -0.034]</code>) — a strong
+      R boost, calibrated to pull the dim red primary patch up to full saturation. Reasonable guess: that
+      boost, applied to <code>A6</code>'s own already-elevated R, is what's overshooting. Tried reducing how
+      hard the fit weights the R/G/B primaries, 6x down from the default. It barely moved the number
+      (<code>R=250</code> down to <code>R=240</code>, out of a true value of <code>190</code>) — the wrong
+      lever, disproven by the same rule as above: check the actual result, don't stop at a plausible-sounding
+      theory.
+    </p>
+
+    <h3>The real cause: extrapolating past the fit's own data</h3>
+    <p>
+      <code>A6</code>'s raw sensor R reads <code>0.950</code>. The highest raw R among every single patch
+      actually used in the CCM fit, for that same capture, is <code>0.545</code>. The matrix was never
+      calibrated anywhere near <code>A6</code>'s actual brightness — its behaviour out there is pure
+      extrapolation, the exact same mechanism as the D/E highlight problem, just showing up on a moderately
+      saturated colour instead of a neutral, and under a threshold (<code>0.985</code>) that never flagged it
+      as clipped.
+    </p>
+
+    <h3>Why is A6's raw R that high in the first place?</h3>
+    <p>
+      Not a property of magenta pigments in general — <code>F2</code>, the chart's actual primary magenta,
+      reads a perfectly ordinary <code>raw R=0.376</code>. Every other reddish patch on the whole card, at a
+      similar true reference R, reads somewhere in <code>0.4-0.5</code>. <code>A6</code> alone jumps to
+      <code>0.95</code> — isolated to this one patch, not a class of colours. Looking at the actual pixels
+      answers it directly: rendered plainly, <code>A6</code> doesn't look magenta at all, it looks like a
+      washed-out warm beige —
+    </p>
+    <figure>
+      <img src="public/images/week-13/a6-washed-out-crop-web.jpg" alt="Patch A6 (labelled 6 on the chart's own scale) rendered as a washed-out warm beige instead of its true low-saturation magenta" />
+      <figcaption>A6, plainly rendered — should be a muted magenta, reads as washed-out beige</figcaption>
+    </figure>
+    <p>
+      and the raw pixels inside the sample window confirm real, partial clipping that the mean-based check
+      missed entirely:
+    </p>
+    <pre><code>R: min=0.89, mean=0.95, max=1.00   -- some individual pixels ARE fully clipped
+G: min=0.82, mean=0.89, max=0.94
+B: min=0.53, mean=0.62, max=0.67</code></pre>
+    <p>
+      <code>is_clipped()</code> checks the sample window's <em>mean</em> against <code>0.985</code> — a
+      window can be genuinely, individually blown out in places and still average out to something that
+      passes. Real gap, independent of anything else found here, worth closing regardless of what's actually
+      causing the overexposure.
+    </p>
+    <p>
+      The overexposure pattern itself points at a specular reflection — a direct glint of the light source
+      off the card's glossy surface at this one spot — rather than the scene just being generally bright.
+      Checked it against brightness across 8 real captures to be sure rather than assume:
+    </p>
+    <pre><code>5200K/4500l  (dim):        84% of the sample window's pixels clipped
+5200K/12000l (brighter):    0% clipped   -- higher lux, LESS clipping
+5200K/20000l (brightest):   3% clipped
+3200K/2500l  (dimmest shot in the whole set): 84% clipped
+3200K/10800l:               95% clipped
+6500K (all 3 sessions, any lux): 0% clipped, every time</code></pre>
+    <p>
+      Zero correlation with lux — the dimmest capture in the entire dataset is 84% blown, while a *brighter*
+      capture at the same colour temperature is completely clean. What does track is the light source's own
+      physical position: every 6500K session is spotless, while most 3200K and some 5200K sessions are badly
+      hit — consistent with a glint whose presence depends on the geometry between light, glossy card, and
+      camera, not on how much light is in the room. Different CTs likely meant physically repositioned
+      lights, and some of those positions happen to send a direct reflection straight into this one patch.
+    </p>
+    <p>
+      Conclusion: like the D/E ceiling, this is a physical capture-time problem, not a code bug — a
+      different mechanism (a glint's geometry rather than plain sensor saturation) but the same category of
+      fix, meaning no amount of further fit-tuning was ever going to solve it. The one genuinely actionable
+      finding to come out of chasing it is the mean-vs-per-pixel gap in <code>is_clipped()</code>, which is
+      worth fixing on its own regardless of this specific patch.
+    </p>
+
+  </div>
+
+  <div class="next-week">
+    <p class="next-label">Next week →</p>
+    <ul class="next-list">
+      <li><span>Roll the auto-detector into the batch pipeline as the default path, keeping <code>--corners</code>/<code>--bbox</code> only as a manual override for captures it can't handle</span></li>
+      <li><span>Re-check <code>HINGE_GAP</code>'s calibration now that the left panel is measured directly instead of relying on it — the fallback path should still be tuned against real data, not left as a leftover default</span></li>
+      <li><span>Write up the rest of this week's work — a pink cast traced through nine fix attempts to a real sensor roll-off — as its own section</span></li>
+    </ul>
+  </div>
+
+  <nav class="post-nav">
+    <a class="nav-link" href="week-12.html">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="15 18 9 12 15 6"/></svg>
+      Week 12
+    </a>
+    <span class="nav-spacer"></span>
+  </nav>
+
+  <footer>
+    <span class="footer-left">© 2026 Abdulrahman · GSoC AGL</span>
+    <div class="footer-right">
+      <a href="https://github.com/Abdulrahman-Yasser" target="_blank">GitHub</a>
+      <a href="https://www.automotivelinux.org/" target="_blank">AGL</a>
+      <a href="index.html">Blog</a>
+    </div>
+  </footer>
+
+</div>
+</body>
+</html>
