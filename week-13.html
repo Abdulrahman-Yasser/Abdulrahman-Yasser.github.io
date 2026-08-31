@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Week 13 · GSoC 2026 · AGL Backup Camera</title>
+  <title>Week 13/14 · GSoC 2026 · AGL Backup Camera</title>
   <meta name="description" content="Week 13 progress update — GSoC 2026 AI-enabled Backup Camera, AGL." />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -270,8 +270,8 @@
   </nav>
 
   <header class="post-header">
-    <div class="post-eyebrow">Week 13 · GSoC 2026 · AGL</div>
-    <h1>Finding Every Box Without Being Told Where It Is</h1>
+    <div class="post-eyebrow">Week 13/14 · GSoC 2026 · AGL</div>
+    <h1>Camera Tuning</h1>
     <div class="post-meta">
       <span>Aug 18 – Aug 31, 2026</span>
       <span>Abdulrahman</span>
@@ -297,46 +297,53 @@
       <svg class="ach-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="20 6 9 17 4 12"/></svg>
       <span>Self-corrects a card photographed upside down by checking that row 1 (white/light tints) is actually brighter than row 6 (blacks) — flips the grid 180° if not</span>
     </li>
+    <li>
+      <svg class="ach-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="20 6 9 17 4 12"/></svg>
+      <span>Built <code>ctt-server</code>: a Flask web UI that runs on the Pi and wraps the whole Raspberry Pi camera-tuning loop — tag &amp; capture, a live coverage checklist, run the tuner, inspect ΔE and lens-shading residuals — instead of a pile of SSH commands and hand-renamed files</span>
+    </li>
+    <li>
+      <svg class="ach-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="20 6 9 17 4 12"/></svg>
+      <span>Ran the real Raspberry Pi Camera Tuning Tool (PiSP target) in ALSC-only mode on 6 flat-fields per camera — produced per-camera lens-shading tables, one corner needing a 5.7× luminance boost and ~1.3× extra red</span>
+    </li>
+    <li>
+      <svg class="ach-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="20 6 9 17 4 12"/></svg>
+      <span>Shot ~150 ChArUco frames per camera and ran a full OpenCV intrinsic calibration — <strong>0.21 px</strong> / <strong>0.22 px</strong> RMS reprojection error for camera 0 / camera 1, both well under the 0.5 px "good" bar</span>
+    </li>
+    <li>
+      <svg class="ach-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="20 6 9 17 4 12"/></svg>
+      <span>Wrote <code>charuco_calibrate.py</code>: auto-detects the ArUco dictionary, filters degenerate near-collinear views before they crash <code>calibrateCamera</code>, and writes detection overlays so detection stays verifiable after the run</span>
+    </li>
+    <li>
+      <svg class="ach-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="20 6 9 17 4 12"/></svg>
+      <span>Mapped every calibration output to where it actually goes: CCM → <code>rpi.ccm</code>, shading → <code>rpi.alsc</code>, WB → <code>rpi.awb</code> in the libcamera tuning file — and lens distortion nowhere in libcamera (no ISP dewarp stage), so it stays an <code>undistort</code> in our pipeline</span>
+    </li>
   </ul>
 
   <p class="sec-label">Details</p>
 
   <div class="prose">
+    <h2>The vinyl boards, finally flat</h2>
+    <p>
+      The two vinyl prints ordered back in week 12 arrived — the ChArUco pattern at A4 and at A1.
+      Vinyl is the fix for the warped-board setback from week 10: unlike paper on cardboard it holds
+      flat on its own, with no rigid backing fighting the humidity. The A4 went on the plain white
+      drawer front (the same flat surface from week 12's white-balance attempt) for the close-range
+      intrinsic captures — it turns up again further down — and the A1 on a large plywood panel for
+      the ground-plane work, where the board has to read clearly from across the room.
+    </p>
+
+    <div class="media-row">
+      <figure>
+        <img src="public/images/week-13/rig/rig-charuco-board-web.jpg" alt="A large-format printed ChArUco board laid flat on a table" />
+        <figcaption>The large-format ChArUco print — for the on-ground BEV / homography calibration, separate from the small board used for the intrinsics below</figcaption>
+      </figure>
+    </div>
 
     <h2>How the auto-detector finds all 48 boxes</h2>
     <p>
-      Getting here went through two earlier stages first, each one solving the same underlying question —
-      where is a patch, actually — a little more directly than the last. First was discovering that
-      <code>ctt</code>'s own autolocator wasn't failing loudly on this card, it was succeeding quietly
-      against the wrong half of it:
-    </p>
-    <figure>
-      <img src="public/images/week-13/ctt-half-card-web.jpg" alt="ctt's detected chart vertices overlaid on the source photo, showing they only bound the right half of the physical SpyderCheckr48 card" />
-      <figcaption>ctt's own detected corners (red), overlaid on the source photo — they stop exactly at the hinge</figcaption>
-    </figure>
-    <p>
-      Hand-measuring the right panel's corners and deriving the left panel from them worked next, until the
-      card's physical fold made that single flat transform drift — worse the further a patch sat from the
-      two corners actually measured:
-    </p>
-    <div class="media-row">
-      <figure>
-        <img src="public/images/week-13/fold-bug-diagnostic-web.jpg" alt="Grid overlay showing the right panel's cells matching the true patches exactly, while the left panel's cells drift out of alignment" />
-        <figcaption>Right panel (anchored to real corners): exact. Left panel: drifting.</figcaption>
-      </figure>
-      <figure>
-        <img src="public/images/week-13/fold-bug-fixed-web.jpg" alt="After the fix: all patch labels correctly centered on both panels, with even spacing across the whole card" />
-        <figcaption>Fixed: same column width on both panels, points centered and evenly spaced</figcaption>
-      </figure>
-    </div>
-    <figure>
-      <img src="public/images/week-13/first-full-card-calibration-web.jpg" alt="All 48 patch labels correctly landing on their patches after manual corner calibration" />
-      <figcaption>The first fully-verified calibration from that fix — all 48 patches, both panels, correctly labeled</figcaption>
-    </figure>
-    <p>
-      That got every patch located correctly, but still only with a person clicking the right panel's
-      corners on every capture. <code>detect_spyder.py</code> is the next step past that: the same "where is
-      each patch" question, now answered directly from the photo — no hands involved — in four steps.
+      <code>detect_spyder.py</code> answers one question — where is each of the 48 patches, in pixel
+      coordinates — straight from the photo, with no hand-clicked corners and no
+      <code>--bbox</code>/<code>--corners</code> arguments. It runs in four steps.
     </p>
 
     <h3>1. Find every patch-shaped square in the frame</h3>
@@ -359,8 +366,7 @@
       radius set to <code>1.9×</code> the median patch size — comfortably more than one patch's own pitch
       (so neighbouring patches within a panel do link up), but well under the gap across the hinge (so the
       two panels never merge into one blob). Left cluster becomes columns A-D, right becomes E-H, sorted by
-      centroid x — that separation is what keeps column D from ever getting pulled in as if it were column
-      E, which used to be a real failure mode.
+      centroid x — that separation keeps column D from being pulled in as if it were column E.
     </p>
 
     <h3>3. Label the squares, fit one homography, fix upside-down</h3>
@@ -375,15 +381,12 @@
       blacks on the bottom) — if a panel comes back the wrong way round, its grid gets turned 180°.
     </p>
 
-    <h3>4. Every centre comes from the same fit — nothing is walked from a neighbour</h3>
+    <h3>4. Every centre comes from the same fit</h3>
     <p>
       Because the whole panel is fit as one 4×6 lattice at once, a patch's centre is just
-      <code>homography × (col, row)</code> directly — rows 2 through 6 aren't derived by stepping down from
-      row 1, they're read off the same fitted transform row 1 was. That's the actual fix for the fold: the
-      old approach anchored to the right panel's corners and then walked the left panel out from the hinge,
-      one column-width step at a time, which is exactly what let error compound the further a patch sat from
-      the two corners that were actually measured. Fitting the left panel's own squares directly means it no
-      longer borrows the right panel's geometry at all — each panel answers for its own patches.
+      <code>homography × (col, row)</code> directly — rows 2 through 6 are read off the same fitted
+      transform as row 1, not stepped down from it. Each panel is fit from its own squares, so the left
+      panel never borrows the right panel's geometry — each one answers for its own patches.
     </p>
     <p>
       Grey: every square candidate found. Orange/cyan: the two panels' chosen clusters. Yellow: each
@@ -412,14 +415,12 @@
       </figure>
     </div>
     <p>
-      On that capture both panels came back clean: 20 of 24 right-panel squares and 18 of 24 left-panel
-      squares scored as homography inliers, neither panel flagged as flipped. A couple of extra checks keep
-      this from going wrong quietly — each panel's fitted quad has to have a plausible aspect ratio
-      (~1.5, patch-grid-shaped, not some stray rectangle), and the two panels have to sit at roughly the same
-      scale and height as each other, or whatever the second-largest cluster was (a shelf edge, a shadow
-      boundary) gets rejected instead of being mistaken for the missing panel. When only one panel is found,
-      the pipeline still has somewhere to fall back to — the older hinge-derivation approach (walking the
-      right panel's own column-width vector across the fold) — just no longer as the primary method.
+      All four came back clean: the right panel scored 20 of 24 squares as homography inliers every time,
+      the left 18–19 of 24, and no panel was flagged as flipped. Two guard checks keep a bad fit from
+      passing quietly — each panel's fitted quad has to have a plausible aspect ratio (~1.5,
+      patch-grid-shaped, not a stray rectangle), and the two panels have to sit at roughly the same scale
+      and height, so a shelf edge or shadow boundary gets rejected rather than mistaken for a panel. If
+      only one panel is detected, the other is derived from it across the hinge as a fallback.
     </p>
 
     <h2>What white balance is actually solving for</h2>
@@ -615,6 +616,12 @@ rpicam-still -n --camera 1 \
       colour correction, no tone curve. That's what the strong green cast in every image in this row is —
       the sensor's actual, uncorrected colour response to this light, before anything downstream touches it.
     </p>
+    <div class="media-row">
+      <figure>
+        <img src="public/images/week-13/rig/rig-spydercheckr-web.jpg" alt="Mobile-phone photo of the Datacolor SpyderCheckr colour chart, folded open to both panels, held against a dark wooden background" />
+        <figcaption>The physical SpyderCheckr, shot on my phone (not a pipeline capture) — A–D on the left panel, E–H on the right, rows 1–6</figcaption>
+      </figure>
+    </div>
     <div class="gallery-grid">
       <figure><img src="public/images/week-13/phases/6500k_8800l_camera0_1raw.jpg" alt="6500K 8800lux raw demosaic, no correction" /><figcaption>6500K &middot; 8800l</figcaption></figure>
       <figure><img src="public/images/week-13/phases/6500k_14600l_camera0_1raw.jpg" alt="6500K 14600lux raw demosaic, no correction" /><figcaption>6500K &middot; 14600l</figcaption></figure>
@@ -795,14 +802,396 @@ B: min=0.53, mean=0.62, max=0.67</code></pre>
       worth fixing on its own regardless of this specific patch.
     </p>
 
+
+    <h2>ctt-server: the tuning loop as a web app, not a pile of shell commands</h2>
+    <p>
+      Everything above is my own Python, run off-Pi against the SpyderCheckr shots. That covers
+      colour correction, but a camera's <em>lens shading</em> — corners darker and colour-shifted
+      relative to the centre — is a separate job, and the tool that does it properly is Raspberry
+      Pi's own Camera Tuning Tool, which reads raw DNGs and writes the sensor's <code>.json</code>
+      tuning file directly. Driving that by hand means SSHing into the Pi, naming every capture with
+      its colour temperature and lux by hand, shuffling folders around, and reading a log file. So
+      the first half of this fortnight went on <code>ctt-server</code>: a small Flask app that runs
+      on the Pi and puts a UI on that whole loop.
+    </p>
+    <div class="media-row">
+      <figure>
+        <img src="public/images/week-13/ctt/ctt-server-boot-web.jpg" alt="Terminal showing ctt-server starting up and serving HTTPS on port 5000" />
+        <figcaption><code>ctt-server</code> starting on the Pi — HTTPS on <code>:5000</code>, self-signed cert</figcaption>
+      </figure>
+      <figure>
+        <img src="public/images/week-13/ctt/ctt-server-projects-web.jpg" alt="ctt-server Projects page — each project is one capture session for one sensor" />
+        <figcaption>Projects — one per sensor; the name becomes the tuning-file base (<code>imx219.json</code>)</figcaption>
+      </figure>
+    </div>
+    <p>
+      A project is one capture session for one sensor. Inside it, tabs follow the same sequence the
+      tuning guide does — <strong>Capture, Images, Run CTT, Results, Tuning, MTF, Sharpen, Preview,
+      Characterise</strong>. The Capture tab removes the most friction: pick an image type
+      (<code>Macbeth</code> / <code>ALSC</code> / <code>CAC</code> / <code>Dark</code>), enter the
+      measured colour temperature and lux, and it writes the file already named the way the tuner
+      expects (<code>imx219_6500k_1000l.dng</code>) — no more hand-renaming. The coverage checklist
+      underneath tracks what the tuner still needs: ALSC flat-fields at ≥2 colour temperatures, ≥3
+      Macbeth shots, Macbeth across ≥3 illuminants.
+    </p>
+    <div class="media-row">
+      <figure>
+        <img src="public/images/week-13/ctt/ctt-server-capture-web.jpg" alt="ctt-server Capture tab — tag-and-capture controls plus a live coverage checklist" />
+        <figcaption>Capture tab — type / CT / lux tagging, filename preview, and the coverage checklist</figcaption>
+      </figure>
+      <figure>
+        <img src="public/images/week-13/ctt/ctt-server-preview-web.jpg" alt="ctt-server Preview tab — live preview test against system or generated tuning" />
+        <figcaption>Preview tab — A/B the camera's built-in tuning against a freshly generated one</figcaption>
+      </figure>
+    </div>
+    <p>
+      It degrades gracefully when there's no camera on the machine — <em>"capture is disabled, run
+      CTT on existing images"</em> — so it can be pointed at a folder of DNGs from a laptop and the
+      run / results / preview half still works. That is exactly how the lens-shading pass below was
+      done.
+    </p>
+
+    <h2>Lens shading: running the real tuner, ALSC-only</h2>
+    <p>
+      The capture targets for lens shading are <em>flat fields</em> — an evenly-lit, featureless
+      surface, shot as raw DNG, one set per illuminant. Six per camera, at 5000&nbsp;K:
+    </p>
+    <div class="media-row">
+      <figure>
+        <img src="public/images/week-13/rig/rig-light-pi-web.jpg" alt="The RGB tube light on a stand next to the Raspberry Pi in a red case and its power bank" />
+        <figcaption>The adjustable RGB light, the Pi, and the power bank that runs a session</figcaption>
+      </figure>
+    </div>
+    <div class="media-row">
+      <figure>
+        <img src="public/images/week-13/ctt/alsc-flatfield-white-web.jpg" alt="A grey flat-field capture, fairly even, with gentle corner darkening" />
+        <figcaption>A workable flat field — fairly even, with the corner falloff the tuner measures</figcaption>
+      </figure>
+      <figure>
+        <img src="public/images/week-13/ctt/alsc-flatfield-hotspot-web.jpg" alt="A flat-field capture spoiled by a bright glare patch toward the right" />
+        <figcaption>…and a weaker one — a glare patch on the right; reshooting these more diffusely is on the list</figcaption>
+      </figure>
+    </div>
+    <p>
+      ALSC has a colour component as well as a luminance one, so some flats were shot under strongly
+      coloured light too — these feed the Cr/Cb (colour-shading) tables:
+    </p>
+    <figure>
+      <img src="public/images/week-13/ctt/alsc-flatfield-green-web.jpg" alt="A green flat-field capture" />
+      <figcaption>Green flat field — the colour-shading side of ALSC</figcaption>
+    </figure>
+    <p>
+      Feeding <code>_alsc_flat_camera0/</code> to the tuner (PiSP target) with no Macbeth, dark or
+      CAC images in the folder puts it in <strong>ALSC-only</strong> mode: it disables CCM, AWB,
+      AGC, gamma/contrast, DPC, denoise, sharpen, CAC and lux, and fits only the shading tables.
+    </p>
+    <pre><code>Images found:
+  Macbeth : 0    ALSC : 6    CAC : 0    Dark : 0
+Disabled: rpi.ccm / rpi.awb / rpi.agc / rpi.contrast / rpi.lux / rpi.dpc / ...
+
+Channel dimensions: w = 1640  h = 1232          # 32x32 stats grid
+ALSC colour tables — Colour temperature: 5000 K
+  Red table   corners (1.319, 1.311, 1.307, 1.329)   centre 1.003
+  Blue table  corners (1.015, 1.037, 1.041, 1.026)   centre 1.051
+  Luminance   corners (4.586, 3.179, 3.408, 5.744)   centre 1.024</code></pre>
+    <p>
+      Read the luminance row directly: the centre of the frame is fine (gain ≈ 1.0), but one corner
+      comes back <strong>5.7× darker</strong> than the centre and needs that much gain to match —
+      and the four corners are nowhere near equal (3.2 / 3.4 / 4.6 / 5.7), so the falloff is
+      lopsided, not a clean radial vignette. The red table says the edges also read about
+      <strong>1.3× red-deficient</strong> against the centre; blue is almost flat. Rendering the
+      32×32 luminance table as a heatmap shows the shape — lowest gain (already-bright) sitting
+      right of centre, worst gain in the bottom-left corner:
+    </p>
+    <div class="media-row">
+      <figure>
+        <img src="public/images/week-13/ctt/alsc-lum-map-cam0-web.jpg" alt="Heatmap of camera 0's ALSC luminance correction table — dark centre, hot bottom-left corner" />
+        <figcaption>Camera 0 luminance gain — 1.00 (dark) → 5.74 (bright)</figcaption>
+      </figure>
+      <figure>
+        <img src="public/images/week-13/ctt/alsc-lum-map-cam1-web.jpg" alt="Heatmap of camera 1's ALSC luminance correction table — similar shape to camera 0" />
+        <figcaption>Camera 1 — same story (5.74 worst corner), fit as its own file</figcaption>
+      </figure>
+    </div>
+    <p>
+      Every flat field in the set has that same brighter patch toward the right, and the tuner put
+      its lowest-gain cells there too — so the pipeline is treating it as real module shading (an
+      off-centre optical axis or sensor tilt) and pulling the rest of the frame up to meet it,
+      rather than papering over a one-off glint. Both IMX219s were run separately; they shade close
+      but not identically, so each gets its own <code>imx219_cameraN_pisp.json</code> — the
+      per-camera-parameters argument from week 8, again.
+    </p>
+    <h3>What the residual means</h3>
+    <p>
+      The tuner reports how non-uniform each flat field still is <em>after</em> its own correction:
+    </p>
+    <div style="overflow-x:auto;">
+    <table class="data-table">
+      <tr><th>flat</th><th>camera 0 — corners / worst</th><th>camera 1 — corners / worst</th></tr>
+      <tr><td>1</td><td>19.5% / 28.7%</td><td>19.4% / 29.9%</td></tr>
+      <tr><td>2</td><td>17.7% / 23.9%</td><td>15.5% / 21.8%</td></tr>
+      <tr><td>3</td><td>11.6% / 14.0%</td><td>11.2% / 13.6%</td></tr>
+      <tr><td>4</td><td>13.8% / 21.9%</td><td>12.7% / 20.2%</td></tr>
+      <tr><td>5</td><td>12.2% / 17.0%</td><td>11.7% / 17.4%</td></tr>
+      <tr><td>6</td><td>10.1% / 17.0%</td><td>10.4% / 18.1%</td></tr>
+    </table>
+    </div>
+    <p>
+      That residual isn't all error left on the table. <code>luminance_strength</code> is 0.8, not
+      1.0 — the correction deliberately stops short of fully flattening the corners, because pushing
+      a corner up by the full 5.7× multiplies its read noise by 5.7× as well. The tool's own Results
+      view draws this as a falloff heatmap with the matching corner / worst / strength numbers:
+    </p>
+    <figure>
+      <img src="public/images/week-13/ctt/ctt-server-alsc-falloff-web.jpg" alt="ctt-server Results tab — ALSC luminance falloff heatmap with corner and worst residual tiles, above an empty colour-accuracy panel" />
+      <figcaption>Results tab — ALSC falloff after correction; the Colour-accuracy panel is empty because this run had no Macbeth shots</figcaption>
+    </figure>
+    <p>
+      That empty "Colour accuracy" panel is the honest summary of what's still missing: this pass
+      fixed lens shading only. The colour-correction matrix and the AWB colour-temperature curve
+      still need SpyderCheckr captures under three-plus real illuminants, fed through the same tool
+      — the capture side of <code>ctt-server</code> exists so that's the next run, not another
+      hand-driven one.
+    </p>
+
+    <h2>ChArUco intrinsic calibration: ~150 poses per camera, both under a quarter-pixel</h2>
+    <p>
+      Separate from the colour work — this is the <em>geometric</em> side: focal length, principal
+      point, and lens distortion, the numbers the BEV homography has been waiting on since week 9.
+      The warped-board problem from week 10 is why it took until now; the fix was a stiffer board
+      and a lot more shots.
+    </p>
+    <h3>The board</h3>
+    <p>
+      A <a href="https://calib.io/pages/camera-calibration-pattern-generator" target="_blank">calib.io</a>
+      ChArUco target, printed and mounted flat:
+    </p>
+    <table class="data-table">
+      <tr><th>parameter</th><th>value</th></tr>
+      <tr><td>layout</td><td>7 × 5 squares (245 × 175 mm)</td></tr>
+      <tr><td>square / marker</td><td>35 mm / 26 mm</td></tr>
+      <tr><td>ArUco dictionary</td><td>DICT_4X4_50 (auto-detected)</td></tr>
+      <tr><td>ChArUco corners</td><td>6 × 4 = 24 &nbsp;(ids 0–23)</td></tr>
+    </table>
+    <p>
+      ChArUco over a plain checkerboard for the same reason as week 9: the ArUco marker inside each
+      white square gives every inner corner a globally-unique id, so a frame that only shows part
+      of the board — some of these do, clipped at a frame edge — still contributes, and a partial
+      or occluded board can't be mislabelled.
+    </p>
+    <h3>The shoot</h3>
+    <p>
+      ~150 frames per camera at the pipeline's working resolution (1640 × 1232), the board swept
+      across distance, tilt and image position so the solver sees the corners under enough distinct
+      perspectives to separate focal length from distance and distortion from principal-point
+      offset. Every frame each camera saw:
+    </p>
+    <div class="media-row">
+      <figure>
+        <img src="public/images/week-13/charuco/poses-cam0-web.jpg" alt="Contact sheet of all 148 ChArUco calibration frames from camera 0" />
+        <figcaption>Camera 0 — 148 frames</figcaption>
+      </figure>
+      <figure>
+        <img src="public/images/week-13/charuco/poses-cam1-web.jpg" alt="Contact sheet of all 148 ChArUco calibration frames from camera 1" />
+        <figcaption>Camera 1 — 148 frames</figcaption>
+      </figure>
+    </div>
+    <p>
+      The room was dim and the board hand-held, deliberately — the detector still locks all 24
+      corners on frames darker and more skewed than anything the running system will meet, which is
+      the cheapest confidence check there is that the board and dictionary are right. Camera 1 was
+      shot the same way:
+    </p>
+    <div class="media-row">
+      <figure>
+        <img src="public/images/week-13/charuco/calib-cam1-089-web.jpg" alt="One camera-1 calibration frame" />
+        <figcaption>calib_089, camera 1</figcaption>
+      </figure>
+    </div>
+    <h3>The script</h3>
+    <p>
+      <code>charuco_calibrate.py</code> — one file, OpenCV, a glob in and a
+      <code>calibration.yaml</code> out:
+    </p>
+    <pre><code># board (calib.io): 7x5 squares, 35 mm square, 26 mm marker, in metres
+board    = cv2.aruco.CharucoBoard((7, 5), 0.035, 0.026, dictionary)
+detector = cv2.aruco.CharucoDetector(board)
+
+for f in files:
+    ch_corners, ch_ids, _, _ = detector.detectBoard(gray)
+    if ch_corners is None or len(ch_corners) &lt; 6:        # need a stable view
+        continue
+    obj, img = board.matchImagePoints(ch_corners, ch_ids)
+    xy = obj.reshape(-1, 3)[:, :2]
+    if len(obj) &lt; 8 or (xy.max(0) - xy.min(0) &lt; 1e-6).any():
+        continue                                          # drop degenerate / collinear views
+    obj_pts.append(obj); img_pts.append(img)
+
+rms, K, dist, rvecs, tvecs = cv2.calibrateCamera(obj_pts, img_pts, img_size, None, None)</code></pre>
+    <p>
+      Three things it does that a first pass usually skips. The ArUco dictionary is
+      <strong>auto-detected</strong> — it runs each <code>DICT_4X4_*</code> against the first frame
+      and keeps whichever finds the most markers, so a wrong dictionary can't fail silently. Every
+      kept view needs ≥ 6 corners. And the degenerate-view filter above drops the near-collinear
+      frames that otherwise make <code>calibrateCamera</code> abort with a cryptic
+      <code>matH0</code> size assertion rather than a useful message. It also writes five detection
+      overlays per run — the <code>detect_check/</code> images above — so "did detection actually
+      work" is answerable without re-running anything.
+    </p>
+    <h3>Results</h3>
+    <div style="overflow-x:auto;">
+    <table class="data-table">
+      <tr><th></th><th>camera 0</th><th>camera 1</th></tr>
+      <tr><td>f<sub>x</sub></td><td>1296.23</td><td>1301.24</td></tr>
+      <tr><td>f<sub>y</sub></td><td>1296.60</td><td>1301.28</td></tr>
+      <tr><td>c<sub>x</sub></td><td>828.56</td><td>840.21</td></tr>
+      <tr><td>c<sub>y</sub></td><td>656.36</td><td>639.79</td></tr>
+      <tr><td>k1, k2, k3</td><td>0.186, −0.459, 0.288</td><td>0.209, −0.557, 0.442</td></tr>
+      <tr><td>p1, p2</td><td>0.00022, −0.00012</td><td>0.00014, 0.00109</td></tr>
+      <tr><td>RMS reprojection</td><td class="ok">0.212 px</td><td class="ok">0.225 px</td></tr>
+    </table>
+    </div>
+    <p>
+      Both land at about a fifth of a pixel — well inside the script's own 0.5 px "GOOD" line, and
+      good enough that reprojection error won't be the limiting term in the BEV stitch. The two
+      cameras come out close but genuinely not identical: f<sub>x</sub> differs by ~5 px, the
+      principal point by ~12 px in x and ~17 px in y, and camera 1's distortion is clearly stronger
+      (k2 −0.557 vs −0.459). That gap is the whole reason each camera carries its own intrinsics
+      through the pipeline instead of a shared average — the weeks 8–9 argument, now with the
+      numbers behind it. Both <code>calibration.yaml</code> files (K, distortion, RMS, image size,
+      dictionary) are the drop-in inputs the homography stage reads.
+    </p>
+
+    <h2>Getting the three matrices into libcamera — and the one that doesn't go there</h2>
+    <p>
+      This fortnight produced three calibration outputs: white balance + a colour-correction matrix
+      (my Python pipeline on the SpyderCheckr shots), lens-shading tables (<code>ctt</code>, ALSC),
+      and the intrinsics + distortion coefficients (OpenCV, ChArUco). Two of the three are libcamera
+      tuning-file blocks the Pi ISP applies at capture time; the third isn't a libcamera thing at
+      all.
+    </p>
+    <div style="overflow-x:auto;">
+    <table class="data-table">
+      <tr><th>calibration output</th><th>libcamera block</th><th>applied</th></tr>
+      <tr><td>colour-correction matrix</td><td class="ok">rpi.ccm</td><td>ISP, at capture</td></tr>
+      <tr><td>white balance vs colour temp</td><td class="ok">rpi.awb &nbsp;(ct_curve)</td><td>ISP, at capture</td></tr>
+      <tr><td>lens shading (ALSC)</td><td class="ok">rpi.alsc</td><td>ISP, at capture</td></tr>
+      <tr><td>lens distortion (k1…k3, p1, p2)</td><td class="clipped">— none —</td><td>our pipeline, after capture</td></tr>
+    </table>
+    </div>
+
+    <h3>The tuning file, and pointing libcamera at it</h3>
+    <p>
+      The Pi's per-sensor tuning file lives at
+      <code>/usr/share/libcamera/ipa/rpi/pisp/imx219.json</code> (Pi 5 / PiSP; the VC4 path is
+      <code>…/rpi/vc4/imx219.json</code>). It's <code>{"version": 2.0, "target": "pisp",
+      "algorithms": [ … ]}</code>, where <code>algorithms</code> is an <em>ordered</em> list of
+      single-key objects — <code>rpi.black_level</code>, <code>rpi.awb</code>, <code>rpi.alsc</code>,
+      <code>rpi.ccm</code>, <code>rpi.contrast</code>, and so on. You calibrate one block, then
+      splice it into a full copy of the stock file in place, keeping array order. Don't ship
+      <code>ctt</code>'s ALSC-only output directly — it holds only <code>rpi.alsc</code>, so the ISP
+      would run with no black level, AWB, CCM or gamma.
+    </p>
+    <p>Then select the merged file per camera:</p>
+    <pre><code># rpicam-apps: one flag; the capture script already runs cam 0 / cam 1 as separate processes
+rpicam-still --camera 0 --tuning-file /home/pi/tuning/imx219_camera0.json -r -o cam0.jpg
+rpicam-still --camera 1 --tuning-file /home/pi/tuning/imx219_camera1.json -r -o cam1.jpg
+
+# libcamera directly -- env var, so one per process:
+LIBCAMERA_RPI_TUNING_FILE=/home/pi/tuning/imx219_camera0.json  ./bev_app --camera 0
+
+# picamera2:
+Picamera2(camera_num=0, tuning=Picamera2.load_tuning_file("imx219_camera0.json"))</code></pre>
+    <p>
+      Per-camera files matter here for the same reason the intrinsics did: the two modules shade and
+      colour-shift differently enough to want their own <code>rpi.alsc</code> (and, once shot,
+      <code>rpi.ccm</code>) tables.
+    </p>
+
+    <h3>Lens shading → <code>rpi.alsc</code></h3>
+    <p>
+      Already in the right shape — <code>ctt</code> wrote it. Copy the whole <code>rpi.alsc</code>
+      object out of <code>imx219_camera0_pisp.json</code> and over the stock file's:
+    </p>
+    <pre><code>{
+  "rpi.alsc": {
+    "omega": 1.3, "n_iter": 100, "luminance_strength": 0.8,
+    "calibrations_Cr":  [ { "ct": 5000, "table": [ /* 32x32 red-gain grid  */ ] } ],
+    "calibrations_Cb":  [ { "ct": 5000, "table": [ /* 32x32 blue-gain grid */ ] } ],
+    "luminance_lut":    [ /* 32x32, colour-temperature-independent */ ],
+    "sigma": 0.005, "sigma_Cb": 0.005
+  }
+}</code></pre>
+    <p>
+      One illuminant (5000 K) → a single entry in each <code>calibrations_*</code> list, so the ISP
+      does no colour-shading CT interpolation — it applies that one grid at every colour temperature.
+      Shooting flats at a second CT later just adds a second <code>{ct, table}</code> pair and the
+      ISP interpolates. <code>luminance_lut</code> is CT-independent by design, so one is always
+      enough.
+    </p>
+
+    <h3>Colour correction → <code>rpi.ccm</code></h3>
+    <p>
+      A list of matrices keyed by colour temperature; the ISP picks by estimated scene CT and
+      interpolates between the two nearest:
+    </p>
+    <pre><code>{
+  "rpi.ccm": {
+    "ccms": [
+      { "ct": 3200, "ccm": [ m00, m01, m02,  m10, m11, m12,  m20, m21, m22 ] },
+      { "ct": 5200, "ccm": [ … ] },
+      { "ct": 6500, "ccm": [ … ] }
+    ]
+  }
+}</code></pre>
+    <p>Three things to get right moving my Python matrix into that array:</p>
+    <ul>
+      <li><strong>Transpose.</strong> My pipeline applies <code>corrected = [R,G,B] @ X</code> (row
+        vector × matrix); libcamera computes <code>out = M · in</code> (matrix × column vector), so
+        <code>M = X<sup>T</sup></code> — flatten <code>X<sup>T</sup></code> row-major for the nine
+        numbers.</li>
+      <li><strong>Rows sum to ≈ 1.</strong> The ISP expects each CCM row to sum to about 1 so a
+        neutral pixel stays neutral — keeping neutrals neutral is <code>rpi.awb</code>'s job, not
+        the matrix's. My unconstrained least-squares fit doesn't guarantee that; renormalise each
+        row (or refit with the constraint) first.</li>
+      <li><strong>Give it ≥ 2 colour temperatures.</strong> A lone <code>{ct, ccm}</code> entry is
+        applied flat everywhere. The 14-condition set on this page already spans 3200–6500 K, so
+        there's a matrix per CT to drop in — what the CCM section higher up was building toward.</li>
+    </ul>
+    <p>
+      Order of operations inside the ISP: black level → lens shading (<code>rpi.alsc</code>) → AWB
+      gains (<code>rpi.awb</code>) → <code>rpi.ccm</code> in linear light → gamma
+      (<code>rpi.contrast</code>). So the matrix is applied to white-balanced linear RGB — exactly
+      what my Python fits against before solving for <code>X</code>.
+    </p>
+
+    <h3>Lens distortion → not libcamera's job</h3>
+    <p>
+      Neither the VC4 nor the PiSP ISP has a geometric barrel/pincushion dewarp stage — no tuning
+      block, no runtime control that takes OpenCV's <code>k1…k3, p1, p2</code>. So
+      <code>calibration.yaml</code> is consumed by <em>our</em> pipeline, not the camera:
+    </p>
+    <pre><code>newK, _ = cv2.getOptimalNewCameraMatrix(K, dist, (1640, 1232), alpha=0)
+map1, map2 = cv2.initUndistortRectifyMap(K, dist, None, newK, (1640, 1232), cv2.CV_16SC2)
+# per frame:  undist = cv2.remap(frame, map1, map2, cv2.INTER_LINEAR)</code></pre>
+    <p>
+      Better still, since the BEV stage already resamples every frame through the ground-plane
+      homography: compose the undistort map with that homography so undistortion and the perspective
+      warp are one GPU resample, not two. The closest libcamera gets to lens geometry is
+      <code>rpi.cac</code> (PiSP only) — a per-channel LUT for <em>lateral chromatic aberration</em>
+      (edge colour fringing), which needs its own CAC capture set (the <code>CAC</code> image type in
+      <code>ctt-server</code>). Different defect from barrel distortion; it stays in the ISP, the
+      distortion stays in the app.
+    </p>
+
   </div>
 
   <div class="next-week">
     <p class="next-label">Next week →</p>
     <ul class="next-list">
-      <li><span>Roll the auto-detector into the batch pipeline as the default path, keeping <code>--corners</code>/<code>--bbox</code> only as a manual override for captures it can't handle</span></li>
-      <li><span>Re-check <code>HINGE_GAP</code>'s calibration now that the left panel is measured directly instead of relying on it — the fallback path should still be tuned against real data, not left as a leftover default</span></li>
-      <li><span>Write up the rest of this week's work — a pink cast traced through nine fix attempts to a real sensor roll-off — as its own section</span></li>
+      <li><span>Continue working on the Flutter application</span></li>
+      <li><span>Take the rig driving and compare, with and without, the current lens-distortion undistort and the colour correction</span></li>
+      <li><span>Add the colour-correction file as an option in the application — load and apply it if it exists, fall back cleanly if not</span></li>
     </ul>
   </div>
 
