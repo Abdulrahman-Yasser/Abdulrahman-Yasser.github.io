@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Week 15 · GSoC 2026 · AGL Backup Camera</title>
+  <meta name="description" content="Week 15 progress update — GSoC 2026 AI-enabled Backup Camera, AGL." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg:        #0d0f10;
+      --surface:   #141618;
+      --surface2:  #1c1f21;
+      --border:    rgba(255,255,255,0.08);
+      --border2:   rgba(255,255,255,0.14);
+      --text:      #e8e6e0;
+      --muted:     #8a8780;
+      --hint:      #4a4845;
+      --green:     #3fcf8e;
+      --green-dim: rgba(63,207,142,0.12);
+      --amber:     #f5a623;
+      --blue:      #5b9cf6;
+      --blue-dim:  rgba(91,156,246,0.1);
+      --red:       #f87171;
+      --mono: 'IBM Plex Mono', monospace;
+      --sans: 'IBM Plex Sans', sans-serif;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--sans);
+      font-size: 15px;
+      line-height: 1.75;
+      min-height: 100vh;
+    }
+
+    .site { max-width: 720px; margin: 0 auto; padding: 3rem 1.5rem 5rem; }
+
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 3rem;
+      padding-bottom: 1.25rem;
+      border-bottom: 0.5px solid var(--border);
+      flex-wrap: wrap;
+      gap: 0.75rem;
+    }
+    .back-link {
+      display: inline-flex; align-items: center; gap: 6px;
+      font-family: var(--mono); font-size: 12px;
+      color: var(--muted); text-decoration: none;
+      transition: color 0.15s;
+    }
+    .back-link:hover { color: var(--text); }
+    .back-link svg { width: 14px; height: 14px; }
+    .topbar-brand { font-family: var(--mono); font-size: 12px; color: var(--hint); }
+
+    .post-header { margin-bottom: 2.5rem; }
+    .post-eyebrow {
+      display: inline-flex; align-items: center; gap: 8px;
+      font-family: var(--mono); font-size: 11px;
+      color: var(--green);
+      border: 0.5px solid rgba(63,207,142,0.3);
+      background: var(--green-dim);
+      border-radius: 4px; padding: 4px 10px; margin-bottom: 1rem;
+    }
+    h1 {
+      font-family: var(--sans); font-size: clamp(22px, 4vw, 32px);
+      font-weight: 600; color: var(--text); line-height: 1.25; margin-bottom: 0.75rem;
+    }
+    .post-meta {
+      display: flex; flex-wrap: wrap; gap: 1.25rem;
+      font-family: var(--mono); font-size: 12px; color: var(--muted);
+    }
+
+    .sec-label {
+      display: flex; align-items: center; gap: 10px;
+      font-family: var(--mono); font-size: 11px; color: var(--hint);
+      letter-spacing: 0.1em; text-transform: uppercase;
+      margin: 2rem 0 1rem;
+    }
+    .sec-label::after { content: ''; flex: 1; height: 0.5px; background: var(--border); }
+
+    .achievement-list { list-style: none; display: flex; flex-direction: column; gap: 10px; margin-bottom: 1.5rem; }
+    .achievement-list li {
+      display: flex; align-items: flex-start; gap: 10px;
+      font-size: 14px; color: var(--text); line-height: 1.55;
+    }
+    .ach-icon { width: 16px; height: 16px; color: var(--green); flex-shrink: 0; margin-top: 3px; }
+
+    .prose { font-size: 15px; color: var(--text); line-height: 1.8; }
+    .prose p { margin-bottom: 1.1rem; }
+    .prose h2 {
+      font-family: var(--sans); font-size: 18px; font-weight: 500;
+      color: var(--text); margin: 2rem 0 0.75rem;
+    }
+    .prose h3 {
+      font-family: var(--sans); font-size: 15px; font-weight: 500;
+      color: var(--muted); margin: 1.5rem 0 0.5rem;
+    }
+    .prose code {
+      font-family: var(--mono); font-size: 13px;
+      background: var(--surface2); border: 0.5px solid var(--border2);
+      border-radius: 4px; padding: 2px 6px; color: var(--green);
+    }
+    .prose pre {
+      background: var(--surface); border: 0.5px solid var(--border2);
+      border-radius: 8px; padding: 1.25rem; overflow-x: auto;
+      font-family: var(--mono); font-size: 13px; color: var(--text);
+      margin: 1rem 0 1.5rem; line-height: 1.6;
+    }
+    .prose pre code { background: none; border: none; padding: 0; color: inherit; font-size: inherit; }
+    .prose a { color: var(--blue); text-decoration: none; }
+    .prose a:hover { text-decoration: underline; }
+    .prose ul, .prose ol { padding-left: 1.4rem; margin-bottom: 1rem; }
+    .prose li { margin-bottom: 0.35rem; }
+    .prose blockquote {
+      border-left: 3px solid var(--border2); padding-left: 1rem;
+      color: var(--muted); font-style: italic; margin: 1rem 0;
+    }
+    .prose figure { margin: 1.25rem 0 1.5rem; }
+    .prose figure img,
+    .prose figure video { width: 100%; border-radius: 8px; border: 0.5px solid var(--border2); display: block; }
+    .prose figure figcaption { font-family: var(--mono); font-size: 11px; color: var(--muted); margin-top: 6px; text-align: center; }
+    .media-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin: 1.25rem 0 1.5rem; align-items: start; }
+    .media-row figure { margin: 0; }
+    @media (max-width: 620px) { .media-row { grid-template-columns: 1fr; } }
+
+    .cards-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 1.5rem; }
+    @media (max-width: 540px) { .cards-row { grid-template-columns: 1fr; } }
+    .mini-card {
+      background: var(--surface); border: 0.5px solid var(--border);
+      border-radius: 10px; padding: 1rem;
+    }
+    .mini-card-label {
+      font-family: var(--mono); font-size: 10px; color: var(--hint);
+      letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 8px;
+    }
+    .mini-card-body { font-size: 13px; color: var(--text); line-height: 1.5; }
+
+    .next-week {
+      background: var(--surface); border: 0.5px solid var(--border);
+      border-left: 3px solid var(--amber); border-radius: 10px;
+      padding: 1rem 1.25rem; margin-top: 2rem;
+    }
+    .next-label { font-family: var(--mono); font-size: 11px; color: var(--amber); margin-bottom: 8px; }
+    .next-text { font-size: 14px; color: var(--text); }
+    .next-week code { white-space: nowrap; }
+    .next-list { list-style: none; display: flex; flex-direction: column; gap: 6px; margin-top: 8px; }
+    .next-list li { display: flex; align-items: flex-start; gap: 8px; font-size: 14px; color: var(--text); }
+    .next-list li::before { content: '→'; color: var(--amber); font-family: var(--mono); font-size: 12px; margin-top: 2px; flex-shrink: 0; }
+
+    .post-nav {
+      display: flex; justify-content: space-between; align-items: center;
+      margin-top: 3rem; padding-top: 1.5rem;
+      border-top: 0.5px solid var(--border);
+      flex-wrap: wrap; gap: 1rem;
+    }
+    .nav-link {
+      display: inline-flex; align-items: center; gap: 6px;
+      font-family: var(--mono); font-size: 12px;
+      color: var(--muted); text-decoration: none;
+      transition: color 0.15s;
+    }
+    .nav-link:hover { color: var(--text); }
+    .nav-link svg { width: 14px; height: 14px; }
+    .nav-spacer { flex: 1; }
+
+    footer {
+      border-top: 0.5px solid var(--border);
+      padding-top: 1.5rem; margin-top: 2rem;
+      display: flex; justify-content: space-between; align-items: center;
+      flex-wrap: wrap; gap: 0.75rem;
+    }
+    .footer-left { font-family: var(--mono); font-size: 12px; color: var(--hint); }
+    .footer-right { display: flex; gap: 14px; }
+    .footer-right a {
+      color: var(--hint); text-decoration: none;
+      font-size: 12px; font-family: var(--mono); transition: color 0.15s;
+    }
+    .footer-right a:hover { color: var(--muted); }
+  </style>
+</head>
+<body>
+<div class="site">
+
+  <nav class="topbar">
+    <a class="back-link" href="index.html">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="15 18 9 12 15 6"/></svg>
+      Back to blog
+    </a>
+    <span class="topbar-brand">gsoc-2026 / agl / week-15</span>
+  </nav>
+
+  <header class="post-header">
+    <div class="post-eyebrow">Week 15 · GSoC 2026 · AGL</div>
+    <h1>A Flutter Entry Point, Four Camera Boxes, and a gRPC Control Plane</h1>
+    <div class="post-meta">
+      <span>Sep 1 – Sep 7, 2026</span>
+      <span>Abdulrahman</span>
+    </div>
+  </header>
+
+  <p class="sec-label">This week</p>
+
+  <ul class="achievement-list">
+    <li>
+      <svg class="ach-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="20 6 9 17 4 12"/></svg>
+      <span>Scaffolded the Flutter front-end (<code>flutter-surround-view</code>), with the entry point modelled on AGL's own <code>camera_streams_app</code> demo — <code>WidgetsFlutterBinding.ensureInitialized()</code> then <code>runApp()</code>. Builds and runs on Linux desktop, ready to retarget to <code>flutter-auto</code> on AGL.</span>
+    </li>
+    <li>
+      <svg class="ach-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="20 6 9 17 4 12"/></svg>
+      <span>Built the first screen: a 2×2 camera grid, each quadrant a <code>CameraBox</code> (placeholder image now, a <code>Texture</code> later) that switches to a single feed or a bird's-eye placeholder.</span>
+    </li>
+    <li>
+      <svg class="ach-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="20 6 9 17 4 12"/></svg>
+      <span>Added the control chrome — a full-height left rail (overlay toggles, snapshot, calibrate, settings) and a bottom bar (6-way view-mode segmented control + a backend-link status pill) — wired as a clickable mock driven by local state.</span>
+    </li>
+    <li>
+      <svg class="ach-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="20 6 9 17 4 12"/></svg>
+      <span>Built the calibration panel — camera select + X / Y / Yaw nudge buttons + Save / Reset — as the UI face of the <code>cam_x/cam_y/yaw</code> live-tune already in the C++ renderer.</span>
+    </li>
+    <li>
+      <svg class="ach-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="20 6 9 17 4 12"/></svg>
+      <span>Designed the UI↔backend boundary: two processes, gRPC over a Unix domain socket, the backend owning the authoritative state and the UI rendering from a <code>WatchState</code> stream. Drafted the <code>.proto</code>.</span>
+    </li>
+  </ul>
+
+  <p class="sec-label">Details</p>
+
+  <div class="prose">
+
+    <h2>The entry point</h2>
+    <p>
+      Rather than invent a structure, I looked at what AGL's Flutter demos actually do. The
+      <code>camera_streams_app</code> in the meta-agl-demo layers has the minimal shape: an async
+      <code>main</code> that makes sure the Flutter bindings exist before any plugin or async work runs,
+      then hands a single root widget to <code>runApp</code>. Mine is the same, minus the camera-plugin
+      line it has and I don't need yet:
+    </p>
+    <pre><code>Future&lt;void&gt; main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  runApp(const SurroundViewApp());
+}
+
+class SurroundViewApp extends StatelessWidget {
+  const SurroundViewApp({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      title: 'Surround View',
+      theme: ThemeData.dark(),
+      home: const SurroundViewScreen(),
+    );
+  }
+}</code></pre>
+    <p>
+      Nothing in the Dart entry point is AGL-specific. The "AGL" part lives entirely in the Yocto recipe —
+      <code>inherit flutter-app agl-app</code>, a <code>PUBSPEC_APPNAME</code>, a systemd unit, and
+      <code>flutter build bundle</code> against the <code>flutter-auto</code> embedder. The same
+      <code>main.dart</code> runs on a desktop or on the target; only the embedder and the build tooling
+      change. That recipe doesn't exist yet — for now the app builds as a plain Flutter Linux desktop app
+      so the layout is fast to iterate on.
+    </p>
+
+    <h2>Four boxes</h2>
+    <p>
+      The first screen is a <code>Column</code> of two <code>Row</code>s, every child wrapped in
+      <code>Expanded</code>, so each quadrant is exactly a quarter of the window and resizes with it. Each
+      cell is a <code>CameraBox</code>: a bordered container holding <code>Image.asset</code> today, with
+      an <code>errorBuilder</code> fallback so a missing file shows a placeholder instead of a red error
+      box.
+    </p>
+    <p>
+      When the capture pipeline is wired in, the <code>Image.asset</code> becomes
+      <code>Texture(textureId: …)</code> — a plugin registers an external texture with the engine and
+      feeds it frames from the libcamera / DMA-BUF output, no CPU copy. The 2×2 layout and the
+      <code>CameraBox</code> wrapper don't change; only the child of the <code>Stack</code> swaps.
+    </p>
+
+    <h2>The control chrome: a left rail and a bottom bar</h2>
+    <p>
+      The bottom bar is a 6-way view-mode segmented control: <em>Grid</em> shows the 2×2,
+      <em>Front / Rear / Left / Right</em> each show one feed full-screen, <em>BEV</em> shows the
+      stitched-view placeholder. The left rail carries the overlay toggles (guide lines, distance grid),
+      snapshot, calibrate, and settings. The <code>● mock</code> pill at the right end is a placeholder
+      for the gRPC link status.
+    </p>
+    <p>
+      Structurally it's deliberately plain: one <code>StatefulWidget</code> holds all the state
+      (view mode, active overlays, calibration flag and deltas), and everything below it is stateless and
+      presentational. Props flow down, callbacks flow up, one <code>setState</code> per interaction. Each
+      of those callbacks is exactly where a gRPC request call goes later.
+    </p>
+
+    <figure>
+      <video src="public/images/week15/week15-flutter-ui.webm" controls preload="metadata"></video>
+      <figcaption>The Flutter mock: 2×2 grid, left rail, bottom bar, view-mode switching and the calibration panel — all driven by local state</figcaption>
+    </figure>
+
+    <h2>The calibration panel</h2>
+    <p>
+      The Calibrate button reveals a small panel over the viewport: four camera chips, then
+      <code>X</code> / <code>Y</code> / <code>Yaw</code> rows each with a <code>−</code> and a
+      <code>+</code>, then Save and Reset. The nudges accumulate and show live
+      (<code>x 0.0&nbsp;&nbsp;y 0.0&nbsp;&nbsp;yaw 0.0°</code>). This is the UI face of the live-tune that
+      already exists on the C++ side — the <code>cam_x_delta / cam_y_delta / yaw_delta</code> fields from
+      the week the 'W' save key was overwriting its own baseline. The panel doesn't do the maths; it just
+      sends deltas.
+    </p>
+
+    <h2>How the buttons will talk to the pipeline</h2>
+    <p>
+      The buttons are the easy 10%. The real question is the transport. First fork: one process or two?
+      That's decided by how the camera pixels and the Flutter chrome end up on the same screen — the C++
+      renderer keeping its own Wayland surface with the Flutter UI drawn transparent on top, versus the
+      C++ output becoming a Flutter external texture. The renderer already runs standalone with its own
+      EGL / Wayland window, so <strong>two processes</strong> is the natural next step.
+    </p>
+    <p>
+      For the channel between them I settled on <strong>gRPC over a Unix domain socket</strong>. The
+      <code>.proto</code> is a contract that documents the whole control surface; one server-streaming
+      RPC gives the "backend owns the state" model for free; and there's a reference in-tree — the same
+      <code>camera_streams_app</code> talks to its inference service exactly this way. A Unix socket, not
+      a TCP port: the backend runs as a systemd service with <code>/dev/video*</code> access, the UI runs
+      unprivileged and <code>After=</code> it.
+    </p>
+    <pre><code>service SurroundView {
+  rpc SetViewMode  (ViewModeRequest)  returns (State);
+  rpc SelectCamera (CameraRequest)    returns (State);
+  rpc SetOverlay   (OverlayRequest)   returns (State);
+  rpc Calibrate    (CalibrateRequest) returns (State);
+  rpc Snapshot     (SnapshotRequest)  returns (SnapshotReply);
+  rpc WatchState   (Empty)            returns (stream State);   // backend -&gt; UI
+}</code></pre>
+    <p>
+      The important design choice is <em>state the backend owns</em>, not fire-and-forget commands. The UI
+      sends a request to change state; the backend broadcasts the new state; every widget renders from the
+      broadcast. The UI is not the only input — reverse gear (CAN → KUKSA.val / VSS) auto-selects the rear
+      camera, a calibration script can poke the deltas, a second client can connect. If the UI rendered
+      from its own optimistic guesses it would drift; rendering from one authoritative stream keeps it
+      honest.
+    </p>
+
+
+
+  </div>
+
+  <div class="next-week">
+    <p class="next-label">Next week →</p>
+    <ul class="next-list">
+      <li><span>Add <code>surroundview.proto</code> to the repo and wire <code>protoc</code> codegen for both Dart and C++</span></li>
+      <li><span>Stand up a stub C++ gRPC server on the Unix socket that just holds and echoes state, so the UI is testable before the renderer is connected</span></li>
+      <li><span>Replace <code>Image.asset</code> in <code>CameraBox</code> with <code>Texture</code>, backed by the libcamera / DMA-BUF output</span></li>
+      <li><span>Get the app building under <code>meta-flutter</code> / <code>flutter-auto</code> on the AGL target</span></li>
+    </ul>
+  </div>
+
+  <nav class="post-nav">
+    <a class="nav-link" href="week-13.html">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="15 18 9 12 15 6"/></svg>
+      Week 13
+    </a>
+    <span class="nav-spacer"></span>
+  </nav>
+
+  <footer>
+    <span class="footer-left">© 2026 Abdulrahman · GSoC AGL</span>
+    <div class="footer-right">
+      <a href="https://github.com/Abdulrahman-Yasser" target="_blank">GitHub</a>
+      <a href="https://www.automotivelinux.org/" target="_blank">AGL</a>
+      <a href="index.html">Blog</a>
+    </div>
+  </footer>
+
+</div>
+</body>
+</html>
