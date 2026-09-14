@@ -131,6 +131,15 @@
     .media-row figure { margin: 0; }
     @media (max-width: 620px) { .media-row { grid-template-columns: 1fr; } }
 
+    .yt-wrap {
+      position: relative; width: 100%; height: 0; padding-top: 56.25%;
+      border-radius: 8px; border: 0.5px solid var(--border2);
+      overflow: hidden; background: var(--surface);
+    }
+    .yt-wrap iframe {
+      position: absolute; inset: 0; width: 100%; height: 100%; border: none;
+    }
+
     .video-note {
       background: var(--surface); border: 0.5px solid var(--border);
       border-radius: 10px; margin: 1.25rem 0 1.5rem; overflow: hidden;
@@ -253,10 +262,6 @@
     <!-- ACHIEVEMENTS GO HERE -->
     <li>
       <svg class="ach-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="20 6 9 17 4 12"/></svg>
-      <span>Took the rig out driving to A/B the calibrated colour-correction matrix against raw footage, with and without it applied — the road test week 13's plan called for</span>
-    </li>
-    <li>
-      <svg class="ach-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="20 6 9 17 4 12"/></svg>
       <span>Surveyed existing commercial backup-camera UIs on YouTube for layout and interaction patterns worth borrowing</span>
     </li>
     <li>
@@ -269,11 +274,7 @@
     </li>
     <li>
       <svg class="ach-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="20 6 9 17 4 12"/></svg>
-      <span>Verified <code>libcam-dmabuf</code> still captures cleanly under Trixie before building anything else on top of it</span>
-    </li>
-    <li>
-      <svg class="ach-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="20 6 9 17 4 12"/></svg>
-      <span>Hooked the libcamera / DMA-BUF frame output into the Flutter UI's <code>CameraBox</code> — the <code>Texture</code> swap week 15 flagged as next</span>
+      <span>Wired the new pipeline_runtime.cpp/.h split into the CMake build and got the live single-camera capture path compiling again after last week's half-finished extraction out of main.cpp</span>
     </li>
     <!-- MORE ACHIEVEMENTS GO HERE -->
   </ul>
@@ -283,15 +284,44 @@
   <div class="prose">
     <!-- MORE SECTIONS GO HERE -->
 
+    <h2>UIs I surveyed</h2>
+    <p>
+      Two references worth keeping: a walkthrough of commercial backup-camera layouts and interaction
+      patterns (from 32:33), and a calibration workflow worth borrowing for the future calibration
+      options on this project (from 18:36).
+    </p>
+    <div class="media-row">
+      <figure>
+        <div class="yt-wrap">
+          <iframe src="https://www.youtube.com/embed/DHkEbAftQy8?start=1953" title="Backup camera UI survey" allowfullscreen loading="lazy"></iframe>
+        </div>
+        <figcaption>Commercial backup-camera UI patterns, from 32:33</figcaption>
+      </figure>
+      <figure>
+        <div class="yt-wrap">
+          <iframe src="https://www.youtube.com/embed/6anpJAK6E9g?start=1116" title="Calibration workflow reference" allowfullscreen loading="lazy"></iframe>
+        </div>
+        <figcaption>Calibration workflow reference, from 18:36</figcaption>
+      </figure>
+    </div>
+
     <h2>One less hand-rolled image decoder</h2>
     <p>
     </p>
+
+    <figure>
+      <video src="public/week16/week16-demo.webm" controls preload="metadata"></video>
+      <figcaption>Demo recording from this week's work</figcaption>
+    </figure>
   </div>
 
   <div class="next-week">
     <p class="next-label">Next week →</p>
     <ul class="next-list">
-      <li><span>PLACEHOLDER</span></li>
+      <li><span>Extend the live-camera pipeline to open every camera libcamera reports instead of just camera 0, one capture slot per camera</span></li>
+      <li><span>Fix the missing StreamConfiguration::validate() call before configure() so the GPU renderer gets the real stride</span></li>
+      <li><span>Add a samplerExternalOES multi-camera shader path so live DMA-BUF frames can feed the same BEV blend canvas --src already produces from recorded video, reusing the existing per-buffer EGLImage cache instead of a new import path</span></li>
+      <li><span>Map each camera to its bev_config.ini slot and get two live cameras blending into one BEV canvas, ready to hand to the Flutter UI</span></li>
     </ul>
   </div>
 
