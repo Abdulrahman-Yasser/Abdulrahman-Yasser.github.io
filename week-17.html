@@ -1,0 +1,474 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Week 17 · GSoC 2026 · AGL Backup Camera</title>
+  <meta name="description" content="Week 17 progress update - GSoC 2026 AI-enabled Backup Camera, AGL." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg:        #0d0f10;
+      --surface:   #141618;
+      --surface2:  #1c1f21;
+      --border:    rgba(255,255,255,0.08);
+      --border2:   rgba(255,255,255,0.14);
+      --text:      #e8e6e0;
+      --muted:     #8a8780;
+      --hint:      #4a4845;
+      --green:     #3fcf8e;
+      --green-dim: rgba(63,207,142,0.12);
+      --amber:     #f5a623;
+      --blue:      #5b9cf6;
+      --blue-dim:  rgba(91,156,246,0.1);
+      --red:       #f87171;
+      --mono: 'IBM Plex Mono', monospace;
+      --sans: 'IBM Plex Sans', sans-serif;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--sans);
+      font-size: 15px;
+      line-height: 1.75;
+      min-height: 100vh;
+    }
+
+    .site { max-width: 720px; margin: 0 auto; padding: 3rem 1.5rem 5rem; }
+
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 3rem;
+      padding-bottom: 1.25rem;
+      border-bottom: 0.5px solid var(--border);
+      flex-wrap: wrap;
+      gap: 0.75rem;
+    }
+    .back-link {
+      display: inline-flex; align-items: center; gap: 6px;
+      font-family: var(--mono); font-size: 12px;
+      color: var(--muted); text-decoration: none;
+      transition: color 0.15s;
+    }
+    .back-link:hover { color: var(--text); }
+    .back-link svg { width: 14px; height: 14px; }
+    .topbar-brand { font-family: var(--mono); font-size: 12px; color: var(--hint); }
+
+    .post-header { margin-bottom: 2.5rem; }
+    .post-eyebrow {
+      display: inline-flex; align-items: center; gap: 8px;
+      font-family: var(--mono); font-size: 11px;
+      color: var(--green);
+      border: 0.5px solid rgba(63,207,142,0.3);
+      background: var(--green-dim);
+      border-radius: 4px; padding: 4px 10px; margin-bottom: 1rem;
+    }
+    h1 {
+      font-family: var(--sans); font-size: clamp(22px, 4vw, 32px);
+      font-weight: 600; color: var(--text); line-height: 1.25; margin-bottom: 0.75rem;
+    }
+    .post-meta {
+      display: flex; flex-wrap: wrap; gap: 1.25rem;
+      font-family: var(--mono); font-size: 12px; color: var(--muted);
+    }
+
+    .sec-label {
+      display: flex; align-items: center; gap: 10px;
+      font-family: var(--mono); font-size: 11px; color: var(--hint);
+      letter-spacing: 0.1em; text-transform: uppercase;
+      margin: 2rem 0 1rem;
+    }
+    .sec-label::after { content: ''; flex: 1; height: 0.5px; background: var(--border); }
+
+    .achievement-list { list-style: none; display: flex; flex-direction: column; gap: 10px; margin-bottom: 1.5rem; }
+    .achievement-list li {
+      display: flex; align-items: flex-start; gap: 10px;
+      font-size: 14px; color: var(--text); line-height: 1.55;
+    }
+    .ach-icon { width: 16px; height: 16px; color: var(--green); flex-shrink: 0; margin-top: 3px; }
+
+    .prose { font-size: 15px; color: var(--text); line-height: 1.8; }
+    .prose p { margin-bottom: 1.1rem; }
+    .prose h2 {
+      font-family: var(--sans); font-size: 18px; font-weight: 500;
+      color: var(--text); margin: 2rem 0 0.75rem;
+    }
+    .prose h3 {
+      font-family: var(--sans); font-size: 15px; font-weight: 500;
+      color: var(--muted); margin: 1.5rem 0 0.5rem;
+    }
+    .prose code {
+      font-family: var(--mono); font-size: 13px;
+      background: var(--surface2); border: 0.5px solid var(--border2);
+      border-radius: 4px; padding: 2px 6px; color: var(--green);
+    }
+    .prose pre {
+      background: var(--surface); border: 0.5px solid var(--border2);
+      border-radius: 8px; padding: 1.25rem; overflow-x: auto;
+      font-family: var(--mono); font-size: 13px; color: var(--text);
+      margin: 1rem 0 1.5rem; line-height: 1.6;
+    }
+    .prose pre code { background: none; border: none; padding: 0; color: inherit; font-size: inherit; }
+    .prose a { color: var(--blue); text-decoration: none; }
+    .prose a:hover { text-decoration: underline; }
+    .prose ul, .prose ol { padding-left: 1.4rem; margin-bottom: 1rem; }
+    .prose li { margin-bottom: 0.35rem; }
+    .prose blockquote {
+      border-left: 3px solid var(--border2); padding-left: 1rem;
+      color: var(--muted); font-style: italic; margin: 1rem 0;
+    }
+    .prose figure { margin: 1.25rem 0 1.5rem; }
+    .prose figure img,
+    .prose figure video { width: 100%; border-radius: 8px; border: 0.5px solid var(--border2); display: block; }
+    .prose figure figcaption { font-family: var(--mono); font-size: 11px; color: var(--muted); margin-top: 6px; text-align: center; }
+    .media-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin: 1.25rem 0 1.5rem; align-items: start; }
+    .media-row figure { margin: 0; }
+    @media (max-width: 620px) { .media-row { grid-template-columns: 1fr; } }
+
+    .video-note {
+      background: var(--surface); border: 0.5px solid var(--border);
+      border-radius: 10px; margin: 1.25rem 0 1.5rem; overflow: hidden;
+    }
+    .video-note summary {
+      display: flex; align-items: center; gap: 8px;
+      padding: 0.85rem 1.1rem; cursor: pointer; user-select: none;
+      font-family: var(--mono); font-size: 13px; color: var(--text);
+      list-style: none;
+    }
+    .video-note summary::-webkit-details-marker { display: none; }
+    .video-note summary:hover { color: var(--green); }
+    .video-note-arrow { width: 14px; height: 14px; color: var(--muted); flex-shrink: 0; transition: transform 0.2s ease, color 0.2s ease; }
+    .video-note[open] .video-note-arrow { transform: rotate(90deg); color: var(--green); }
+    .video-note video {
+      display: block; width: 100%;
+      border-top: 0.5px solid var(--border);
+    }
+
+    .cards-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 1.5rem; }
+    @media (max-width: 540px) { .cards-row { grid-template-columns: 1fr; } }
+    .mini-card {
+      background: var(--surface); border: 0.5px solid var(--border);
+      border-radius: 10px; padding: 1rem;
+    }
+    .mini-card-label {
+      font-family: var(--mono); font-size: 10px; color: var(--hint);
+      letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 8px;
+    }
+    .mini-card-body { font-size: 13px; color: var(--text); line-height: 1.5; }
+
+    .plan-table {
+      width: 100%; border-collapse: collapse; margin: 1rem 0 1.5rem;
+      font-size: 13px;
+    }
+    .plan-table th {
+      font-family: var(--mono); font-size: 10px; color: var(--hint);
+      letter-spacing: 0.08em; text-transform: uppercase;
+      text-align: left; padding: 0 0.75rem 0.6rem;
+      border-bottom: 0.5px solid var(--border2);
+    }
+    .plan-table td {
+      padding: 0.55rem 0.75rem;
+      border-bottom: 0.5px solid var(--border);
+      color: var(--text); vertical-align: top; line-height: 1.5;
+    }
+    .plan-table tr:last-child td { border-bottom: none; }
+    .plan-table td:first-child {
+      font-family: var(--mono); font-size: 12px;
+      color: var(--muted); white-space: nowrap;
+    }
+    .plan-table td.mono { font-family: var(--mono); font-size: 12px; }
+
+    .next-week {
+      background: var(--surface); border: 0.5px solid var(--border);
+      border-left: 3px solid var(--amber); border-radius: 10px;
+      padding: 1rem 1.25rem; margin-top: 2rem;
+    }
+    .next-label { font-family: var(--mono); font-size: 11px; color: var(--amber); margin-bottom: 8px; }
+    .next-text { font-size: 14px; color: var(--text); }
+    .next-week code { white-space: nowrap; }
+    .next-list { list-style: none; display: flex; flex-direction: column; gap: 6px; margin-top: 8px; }
+    .next-list li { display: flex; align-items: flex-start; gap: 8px; font-size: 14px; color: var(--text); }
+    .next-list li::before { content: '→'; color: var(--amber); font-family: var(--mono); font-size: 12px; margin-top: 2px; flex-shrink: 0; }
+
+    .post-nav {
+      display: flex; justify-content: space-between; align-items: center;
+      margin-top: 3rem; padding-top: 1.5rem;
+      border-top: 0.5px solid var(--border);
+      flex-wrap: wrap; gap: 1rem;
+    }
+    .nav-link {
+      display: inline-flex; align-items: center; gap: 6px;
+      font-family: var(--mono); font-size: 12px;
+      color: var(--muted); text-decoration: none;
+      transition: color 0.15s;
+    }
+    .nav-link:hover { color: var(--text); }
+    .nav-link svg { width: 14px; height: 14px; }
+    .nav-spacer { flex: 1; }
+
+    footer {
+      border-top: 0.5px solid var(--border);
+      padding-top: 1.5rem; margin-top: 2rem;
+      display: flex; justify-content: space-between; align-items: center;
+      flex-wrap: wrap; gap: 0.75rem;
+    }
+    .footer-left { font-family: var(--mono); font-size: 12px; color: var(--hint); }
+    .footer-right { display: flex; gap: 14px; }
+    .footer-right a {
+      color: var(--hint); text-decoration: none;
+      font-size: 12px; font-family: var(--mono); transition: color 0.15s;
+    }
+    .footer-right a:hover { color: var(--muted); }
+  </style>
+</head>
+<body>
+<div class="site">
+
+  <nav class="topbar">
+    <a class="back-link" href="index.html">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="15 18 9 12 15 6"/></svg>
+      Back to blog
+    </a>
+    <span class="topbar-brand">gsoc-2026 / agl / week-17</span>
+  </nav>
+
+  <header class="post-header">
+    <div class="post-eyebrow">Week 17 · GSoC 2026 · AGL</div>
+    <h1>Live Cameras to the GPU, and Into Flutter Through ivi-homescreen</h1>
+    <div class="post-meta">
+      <span>Sep 15 – Sep 21, 2026</span>
+      <span>Abdulrahman</span>
+    </div>
+  </header>
+
+  <p class="sec-label">This week</p>
+
+  <ul class="achievement-list">
+    <!-- ACHIEVEMENTS GO HERE -->
+    <li>
+      <svg class="ach-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="20 6 9 17 4 12"/></svg>
+      <span>Reworked the live camera path into a reusable pipeline that opens every camera libcamera reports, one capture slot per camera, and fixed a missing <code>validate()</code> call before <code>configure()</code> that the renderer's stride depends on</span>
+    </li>
+    <li>
+      <svg class="ach-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="20 6 9 17 4 12"/></svg>
+      <span>Added a live multi-camera path to the GPU renderer: a new shader that samples each camera's DMA-BUF directly as an external texture, so two live cameras blend into the same BEV canvas the recorded videos produced</span>
+    </li>
+    <li>
+      <svg class="ach-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="20 6 9 17 4 12"/></svg>
+      <span>Ran it on the RPi5 with two IMX219 cameras and fixed a Mesa V3D driver crash on the first draw by declaring one external sampler per camera instead of an array of samplers</span>
+    </li>
+    <li>
+      <svg class="ach-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="20 6 9 17 4 12"/></svg>
+      <span>Exposed the pipeline as a C API in <code>libpipeline_core.so</code> (create, start, stop, calibration, snapshot) with its own render thread and EGL context, plus a small test program to check it on the board</span>
+    </li>
+    <li>
+      <svg class="ach-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="20 6 9 17 4 12"/></svg>
+      <span>Found why cross-building from the PC against a copied Pi sysroot failed (an older host toolchain against Trixie's glibc) and moved to building the library natively on the Pi</span>
+    </li>
+    <li>
+      <svg class="ach-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="20 6 9 17 4 12"/></svg>
+      <span>Set up <code>emb_cli</code> and built ivi-homescreen for the Pi 5 with <code>emb cross</code>: pinned the right Flutter version, initialised the missing submodules, and turned on <code>BUILD_COMPOSITOR</code> so the shell hosts platform views</span>
+    </li>
+    <li>
+      <svg class="ach-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="20 6 9 17 4 12"/></svg>
+      <span>Built ivi-homescreen and the Flutter app for the Pi 5 with <code>emb cross</code>, and ran the platform view from a PC over SSH, including working through <code>emb</code> setup problems (PATH, Flutter version pin, submodules, a full disk, missing arm64 engine tools)</span>
+    </li>
+    <li>
+      <svg class="ach-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="20 6 9 17 4 12"/></svg>
+      <span>Tested Joel's pull request on the Pi with the test pattern and with live cameras. Two cameras ran at 30 fps once the sensors' frame duration was pinned with the <code>camera_fps</code> flag (the limit was the sensors' auto exposure, not the GPU), and the zoom and size were tuned with <code>BEV_PX_PER_M</code>, <code>BEV_WIDTH</code>, <code>BEV_HEIGHT</code>, <code>BEV_CAM_FPS</code> and <code>BEV_CAMERAS</code></span>
+    </li>
+    <li>
+      <svg class="ach-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="20 6 9 17 4 12"/></svg>
+      <span>Moved my Flutter UI onto Joel's <code>bev_view</code> package and merged it into <code>main</code> locally: the 360 view is now a live two-camera blend shown through his platform view, running on the Pi 5</span>
+    </li>
+    <li>
+      <svg class="ach-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="20 6 9 17 4 12"/></svg>
+      <span>Added live single-camera views for front and right, each as the normal image or as that camera's own bird's-eye view, and made the Front/Rear toggle use them too. Rear, left and the 2D view are still placeholders</span>
+    </li>
+    <li>
+      <svg class="ach-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="20 6 9 17 4 12"/></svg>
+      <span>Added the frame rate readout to every live view (on screen with <code>BEV_STAT=1</code>, and as a console line on the 360 view), using Joel's stats: fps, source and view size, buffer type, fence waits</span>
+    </li>
+    <li>
+      <svg class="ach-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="20 6 9 17 4 12"/></svg>
+      <span>Fixed the single-camera shader to output the true camera colors, gave each <code>camera:N</code> source its own calibration slot, and added a short retry when a camera is still busy while one view closes and the next opens</span>
+    </li>
+    <li>
+      <svg class="ach-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="20 6 9 17 4 12"/></svg>
+      <span>Set up a repeatable deploy loop from the PC: rsync the source to the Pi, rebuild the library there, run <code>emb cross</code> with <code>--deploy-dir</code>, copy the native <code>libbev_view.so</code> over the bundled one, and start the app over SSH with the Wayland environment</span>
+    </li>
+    <!-- MORE ACHIEVEMENTS GO HERE -->
+  </ul>
+
+  <p class="sec-label">Details</p>
+
+  <div class="prose">
+    <!-- MORE SECTIONS GO HERE -->
+
+    <h2>The path from a camera to a Flutter view</h2>
+    <p>
+      Two live cameras are opened by libcamera and their DMA-BUFs are imported straight into the GPU,
+      where a shader blends them into the bird's-eye-view canvas. The result is handed to ivi-homescreen as
+      a platform view through Joel's delivery code, and the Flutter app shows that view. Nothing is copied
+      through the CPU on the way.
+    </p>
+
+    <h2>What was built</h2>
+    <ul>
+      <li>A multi-camera pipeline (<code>pipeline_runtime</code>) that opens every camera libcamera reports.</li>
+      <li>A live blend path in the renderer, plus a linear export ring for the shell.</li>
+      <li>A C API in <code>libpipeline_core.so</code> with its own render thread and EGL context, and a small test program for the board.</li>
+      <li>A full <code>emb cross</code> build and deploy of the shell and the app to the Pi 5.</li>
+      <li>A read-through of Joel's pull request, and running its example on the board as a reference.</li>
+    </ul>
+
+    <h2>Building ivi-homescreen and the app with emb</h2>
+    <p>
+      The commands in the order I ran them, with the problem each one hit and how it was solved.
+      Everything runs on the PC, and <code>emb cross</code> builds for the Pi 5 and copies the result over SSH.
+    </p>
+
+    <h3>1. Get emb into the shell</h3>
+<pre><code>cd /media/abdu/LinuxHome/Embedded_Linux/git_ignoring/gsoc/emb_cli
+eval "$(./bootstrap.sh --shellenv)"
+emb --version</code></pre>
+    <p>
+      Problem: <code>emb: not found</code>. The command is only on the PATH after the bootstrap script
+      prints its environment. Fix: run the <code>eval</code> line in every new terminal.
+    </p>
+
+    <h3>2. Move the cache to the big disk</h3>
+<pre><code>export EMB_CACHE_DIR=/media/abdu/LinuxHome/emb-cache
+echo 'export EMB_CACHE_DIR=/media/abdu/LinuxHome/emb-cache' &gt;&gt; ~/.bashrc</code></pre>
+    <p>
+      Problem: the sysroot build failed with <code>dd failed: No space left on device</code>.
+      The default cache is on the small system disk. Fix: point <code>EMB_CACHE_DIR</code> at the
+      bigger disk, delete the half-written temporary files, and start again.
+    </p>
+
+    <h3>3. Set up the toolchain and Flutter</h3>
+<pre><code>emb doctor
+emb setup --config ../configs --yes
+. ./setup_env.sh</code></pre>
+    <p>
+      Problem: the setup did not use the Flutter version ivi-homescreen expects. Fix: read it from the
+      shell's own <code>.flutter-version</code> file and pass it in.
+    </p>
+<pre><code>cat ../ivi-homescreen/.flutter-version
+emb setup --skip-deps --skip-sync --arch arm64 --flutter-version "$(cat ../ivi-homescreen/.flutter-version)"
+. ./setup_env.sh
+flutter --version</code></pre>
+
+    <h3>4. Initialise the shell's submodules</h3>
+<pre><code>cd /media/abdu/LinuxHome/Embedded_Linux/git_ignoring/gsoc/ivi-homescreen
+git submodule update --init --recursive</code></pre>
+    <p>
+      Problem: the shell build failed because several submodule folders were empty. Fix: the command above.
+    </p>
+
+    <h3>5. Build the arm64 engine</h3>
+<pre><code>cd /media/abdu/LinuxHome/Embedded_Linux/git_ignoring/gsoc/emb_cli
+. ./setup_env.sh
+emb engine --arch arm64 --mode release</code></pre>
+    <p>
+      Problem: the release build of the app could not find an arm64 <code>gen_snapshot</code>.
+      Fix: build the arm64 release engine, which provides it.
+    </p>
+
+    <h3>6. Turn on the compositor for wayland-egl</h3>
+    <p>
+      Problem: the app started, but the platform view failed with <code>MissingPluginException</code> on
+      <code>flutter/platform_views</code>. The shell only registers that handler when built with
+      <code>BUILD_COMPOSITOR</code>, and the Pi manifest had it off for the wayland-egl backend.
+      Fix: add it under <code>wayland-egl</code> in <code>ivi-homescreen/.emb/raspberry-pi.emb.yaml</code>
+      and rebuild the shell.
+    </p>
+<pre><code>wayland-egl:
+  BUILD_COMPOSITOR: 'ON'</code></pre>
+
+    <h3>7. Build and deploy the shell and the app</h3>
+<pre><code>cd /media/abdu/LinuxHome/Embedded_Linux/git_ignoring/gsoc/emb_cli
+eval "$(./bootstrap.sh --shellenv)"
+. ./setup_env.sh
+emb cross /media/abdu/LinuxHome/Embedded_Linux/git_ignoring/gsoc/ivi-homescreen \
+  --target rpi5-trixie --build --backend wayland-egl --no-verify \
+  --app /media/abdu/LinuxHome/Embedded_Linux/git_ignoring/gsoc/libcamera-dmabuf-capture/flutter-surround-view \
+  --mode release --deploy abdu@192.168.100.23 --deploy-dir ui</code></pre>
+    <p>
+      This builds the shell, bundles the Flutter app, and copies both into <code>~/ui</code> on the Pi.
+      Problem: the deployed <code>libbev_view.so</code> was cross-built against libcamera 0.4, but the Pi
+      runs 0.7, so it would not load. Fix: rebuild the library on the Pi and copy it over the bundled one
+      after every deploy.
+    </p>
+<pre><code>ssh abdu@192.168.100.23 'cp ~/libcamera-dmabuf-capture-live/build-pi/libbev_view.so ~/ui/lib/libbev_view.so'</code></pre>
+
+    <h3>8. Run it on the Pi</h3>
+<pre><code>ssh -t abdu@192.168.100.23 'cd ~/ui &amp;&amp; BEV_STAT=1 WAYLAND_DISPLAY=wayland-0 XDG_RUNTIME_DIR=/run/user/$(id -u) ./homescreen -b . -f'</code></pre>
+
+    <h2>Where we stand</h2>
+    <p>
+      The Flutter app runs on the Pi 5 through ivi-homescreen with two live cameras at 30 fps. It shows a
+      live 360 view, plus live front and right views as normal or bird's-eye, each with an fps readout.
+      Rear, left and the 2D view are still placeholders. Open points are the release fences, which never
+      signal on the wayland-egl backend (every frame waits its 34 ms and draws over the buffer anyway),
+      calibrating the config for the live rig, and the runtime controls (zoom and calibration), which the
+      app does not have yet.
+    </p>
+
+    <h2>Getting the Pi's screen onto the tablet</h2>
+    <p>
+      For the live test with the car I want the app on a tablet-sized screen. I ordered an Anker 7 in 1
+      USB-C hub with HDMI to connect the Pi's screen to my tablet. It has not arrived yet, so I will set
+      it up and use it next week, once it arrives.
+    </p>
+    <figure>
+      <img src="public/week17/img.jpeg" alt="Anker 7 in 1 USB-C hub with 4K 60Hz HDMI" />
+      <figcaption>The hub I ordered for the tablet screen</figcaption>
+    </figure>
+
+    <h2>Walkthrough</h2>
+    <p>
+      A recording of the Flutter app running on the Pi 5 through ivi-homescreen, with the live cameras.
+    </p>
+    <figure>
+      <video src="public/week17/flutter_ui.mp4" controls preload="metadata"></video>
+      <figcaption>The Flutter UI on the Pi 5 with live cameras</figcaption>
+    </figure>
+  </div>
+
+  <div class="next-week">
+    <p class="next-label">Next week →</p>
+    <ul class="next-list">
+      <li><span>The right-hand BEV panel should be active, which will require me to add a function or two at the backend library, so two views can show the same cameras at once</span></li>
+      <li><span>Test it on a tablet screen, a live test with the car !</span></li>
+      <li><span>Expand the project to four cameras for a full 360 degree view, which I am excited to build. The first step is finding the right cameras for the rig</span></li>
+    </ul>
+  </div>
+
+  <nav class="post-nav">
+    <a class="nav-link" href="week-16.html">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="15 18 9 12 15 6"/></svg>
+      Week 16
+    </a>
+    <span class="nav-spacer"></span>
+  </nav>
+
+  <footer>
+    <span class="footer-left">© 2026 Abdulrahman · GSoC AGL</span>
+    <div class="footer-right">
+      <a href="https://github.com/Abdulrahman-Yasser" target="_blank">GitHub</a>
+      <a href="https://www.automotivelinux.org/" target="_blank">AGL</a>
+      <a href="run-flags.html">Run flags</a>
+      <a href="index.html">Blog</a>
+    </div>
+  </footer>
+
+</div>
+</body>
+</html>

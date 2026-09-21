@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Run flags · GSoC 2026 · AGL Backup Camera</title>
+  <meta name="description" content="Reference for the flags and environment variables used to run the surround view app on the Pi 5." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg:        #0d0f10;
+      --surface:   #141618;
+      --surface2:  #1c1f21;
+      --border:    rgba(255,255,255,0.08);
+      --border2:   rgba(255,255,255,0.14);
+      --text:      #e8e6e0;
+      --muted:     #8a8780;
+      --hint:      #4a4845;
+      --green:     #3fcf8e;
+      --green-dim: rgba(63,207,142,0.12);
+      --amber:     #f5a623;
+      --blue:      #5b9cf6;
+      --blue-dim:  rgba(91,156,246,0.1);
+      --red:       #f87171;
+      --mono: 'IBM Plex Mono', monospace;
+      --sans: 'IBM Plex Sans', sans-serif;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--sans);
+      font-size: 15px;
+      line-height: 1.75;
+      min-height: 100vh;
+    }
+
+    .site { max-width: 720px; margin: 0 auto; padding: 3rem 1.5rem 5rem; }
+
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 3rem;
+      padding-bottom: 1.25rem;
+      border-bottom: 0.5px solid var(--border);
+      flex-wrap: wrap;
+      gap: 0.75rem;
+    }
+    .back-link {
+      display: inline-flex; align-items: center; gap: 6px;
+      font-family: var(--mono); font-size: 12px;
+      color: var(--muted); text-decoration: none;
+      transition: color 0.15s;
+    }
+    .back-link:hover { color: var(--text); }
+    .back-link svg { width: 14px; height: 14px; }
+    .topbar-brand { font-family: var(--mono); font-size: 12px; color: var(--hint); }
+
+    .post-header { margin-bottom: 2.5rem; }
+    .post-eyebrow {
+      display: inline-flex; align-items: center; gap: 8px;
+      font-family: var(--mono); font-size: 11px;
+      color: var(--green);
+      border: 0.5px solid rgba(63,207,142,0.3);
+      background: var(--green-dim);
+      border-radius: 4px; padding: 4px 10px; margin-bottom: 1rem;
+    }
+    h1 {
+      font-family: var(--sans); font-size: clamp(22px, 4vw, 32px);
+      font-weight: 600; color: var(--text); line-height: 1.25; margin-bottom: 0.75rem;
+    }
+    .post-meta {
+      display: flex; flex-wrap: wrap; gap: 1.25rem;
+      font-family: var(--mono); font-size: 12px; color: var(--muted);
+    }
+
+    .sec-label {
+      display: flex; align-items: center; gap: 10px;
+      font-family: var(--mono); font-size: 11px; color: var(--hint);
+      letter-spacing: 0.1em; text-transform: uppercase;
+      margin: 2rem 0 1rem;
+    }
+    .sec-label::after { content: ''; flex: 1; height: 0.5px; background: var(--border); }
+
+    .achievement-list { list-style: none; display: flex; flex-direction: column; gap: 10px; margin-bottom: 1.5rem; }
+    .achievement-list li {
+      display: flex; align-items: flex-start; gap: 10px;
+      font-size: 14px; color: var(--text); line-height: 1.55;
+    }
+    .ach-icon { width: 16px; height: 16px; color: var(--green); flex-shrink: 0; margin-top: 3px; }
+
+    .prose { font-size: 15px; color: var(--text); line-height: 1.8; }
+    .prose p { margin-bottom: 1.1rem; }
+    .prose h2 {
+      font-family: var(--sans); font-size: 18px; font-weight: 500;
+      color: var(--text); margin: 2rem 0 0.75rem;
+    }
+    .prose h3 {
+      font-family: var(--sans); font-size: 15px; font-weight: 500;
+      color: var(--muted); margin: 1.5rem 0 0.5rem;
+    }
+    .prose code {
+      font-family: var(--mono); font-size: 13px;
+      background: var(--surface2); border: 0.5px solid var(--border2);
+      border-radius: 4px; padding: 2px 6px; color: var(--green);
+    }
+    .prose pre {
+      background: var(--surface); border: 0.5px solid var(--border2);
+      border-radius: 8px; padding: 1.25rem; overflow-x: auto;
+      font-family: var(--mono); font-size: 13px; color: var(--text);
+      margin: 1rem 0 1.5rem; line-height: 1.6;
+    }
+    .prose pre code { background: none; border: none; padding: 0; color: inherit; font-size: inherit; }
+    .prose a { color: var(--blue); text-decoration: none; }
+    .prose a:hover { text-decoration: underline; }
+    .prose ul, .prose ol { padding-left: 1.4rem; margin-bottom: 1rem; }
+    .prose li { margin-bottom: 0.35rem; }
+    .prose blockquote {
+      border-left: 3px solid var(--border2); padding-left: 1rem;
+      color: var(--muted); font-style: italic; margin: 1rem 0;
+    }
+    .prose figure { margin: 1.25rem 0 1.5rem; }
+    .prose figure img,
+    .prose figure video { width: 100%; border-radius: 8px; border: 0.5px solid var(--border2); display: block; }
+    .prose figure figcaption { font-family: var(--mono); font-size: 11px; color: var(--muted); margin-top: 6px; text-align: center; }
+    .media-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin: 1.25rem 0 1.5rem; align-items: start; }
+    .media-row figure { margin: 0; }
+    @media (max-width: 620px) { .media-row { grid-template-columns: 1fr; } }
+
+    .video-note {
+      background: var(--surface); border: 0.5px solid var(--border);
+      border-radius: 10px; margin: 1.25rem 0 1.5rem; overflow: hidden;
+    }
+    .video-note summary {
+      display: flex; align-items: center; gap: 8px;
+      padding: 0.85rem 1.1rem; cursor: pointer; user-select: none;
+      font-family: var(--mono); font-size: 13px; color: var(--text);
+      list-style: none;
+    }
+    .video-note summary::-webkit-details-marker { display: none; }
+    .video-note summary:hover { color: var(--green); }
+    .video-note-arrow { width: 14px; height: 14px; color: var(--muted); flex-shrink: 0; transition: transform 0.2s ease, color 0.2s ease; }
+    .video-note[open] .video-note-arrow { transform: rotate(90deg); color: var(--green); }
+    .video-note video {
+      display: block; width: 100%;
+      border-top: 0.5px solid var(--border);
+    }
+
+    .cards-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 1.5rem; }
+    @media (max-width: 540px) { .cards-row { grid-template-columns: 1fr; } }
+    .mini-card {
+      background: var(--surface); border: 0.5px solid var(--border);
+      border-radius: 10px; padding: 1rem;
+    }
+    .mini-card-label {
+      font-family: var(--mono); font-size: 10px; color: var(--hint);
+      letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 8px;
+    }
+    .mini-card-body { font-size: 13px; color: var(--text); line-height: 1.5; }
+
+    .plan-table {
+      width: 100%; border-collapse: collapse; margin: 1rem 0 1.5rem;
+      font-size: 13px;
+    }
+    .plan-table th {
+      font-family: var(--mono); font-size: 10px; color: var(--hint);
+      letter-spacing: 0.08em; text-transform: uppercase;
+      text-align: left; padding: 0 0.75rem 0.6rem;
+      border-bottom: 0.5px solid var(--border2);
+    }
+    .plan-table td {
+      padding: 0.55rem 0.75rem;
+      border-bottom: 0.5px solid var(--border);
+      color: var(--text); vertical-align: top; line-height: 1.5;
+    }
+    .plan-table tr:last-child td { border-bottom: none; }
+    .plan-table td:first-child {
+      font-family: var(--mono); font-size: 12px;
+      color: var(--muted); white-space: nowrap;
+    }
+    .plan-table td.mono { font-family: var(--mono); font-size: 12px; }
+
+    .next-week {
+      background: var(--surface); border: 0.5px solid var(--border);
+      border-left: 3px solid var(--amber); border-radius: 10px;
+      padding: 1rem 1.25rem; margin-top: 2rem;
+    }
+    .next-label { font-family: var(--mono); font-size: 11px; color: var(--amber); margin-bottom: 8px; }
+    .next-text { font-size: 14px; color: var(--text); }
+    .next-week code { white-space: nowrap; }
+    .next-list { list-style: none; display: flex; flex-direction: column; gap: 6px; margin-top: 8px; }
+    .next-list li { display: flex; align-items: flex-start; gap: 8px; font-size: 14px; color: var(--text); }
+    .next-list li::before { content: '→'; color: var(--amber); font-family: var(--mono); font-size: 12px; margin-top: 2px; flex-shrink: 0; }
+
+    .post-nav {
+      display: flex; justify-content: space-between; align-items: center;
+      margin-top: 3rem; padding-top: 1.5rem;
+      border-top: 0.5px solid var(--border);
+      flex-wrap: wrap; gap: 1rem;
+    }
+    .nav-link {
+      display: inline-flex; align-items: center; gap: 6px;
+      font-family: var(--mono); font-size: 12px;
+      color: var(--muted); text-decoration: none;
+      transition: color 0.15s;
+    }
+    .nav-link:hover { color: var(--text); }
+    .nav-link svg { width: 14px; height: 14px; }
+    .nav-spacer { flex: 1; }
+
+    footer {
+      border-top: 0.5px solid var(--border);
+      padding-top: 1.5rem; margin-top: 2rem;
+      display: flex; justify-content: space-between; align-items: center;
+      flex-wrap: wrap; gap: 0.75rem;
+    }
+    .footer-left { font-family: var(--mono); font-size: 12px; color: var(--hint); }
+    .footer-right { display: flex; gap: 14px; }
+    .footer-right a {
+      color: var(--hint); text-decoration: none;
+      font-size: 12px; font-family: var(--mono); transition: color 0.15s;
+    }
+    .footer-right a:hover { color: var(--muted); }
+  </style>
+</head>
+<body>
+<div class="site">
+
+  <nav class="topbar">
+    <a class="back-link" href="week-17.html">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="15 18 9 12 15 6"/></svg>
+      Back to week 17
+    </a>
+    <span class="topbar-brand">gsoc-2026 / agl / reference</span>
+  </nav>
+
+  <header class="post-header">
+    <div class="post-eyebrow">Reference · GSoC 2026 · AGL</div>
+    <h1>Flags and Settings for the Surround View App</h1>
+  </header>
+
+  <div class="prose">
+        <p>
+      The command in step 8 has three parts: two variables that only tell the shell how to reach the screen,
+      the <code>BEV_*</code> variables that configure the camera side (read by the Flutter app and by the
+      native <code>libbev_view.so</code>), and the flags of the <code>homescreen</code> shell itself.
+      For example, four cameras with a tighter zoom on the DRM backend:
+    </p>
+<pre><code>BEV_STAT=1 BEV_CAMERAS=4 BEV_PX_PER_M=120 ./homescreen -b . -f --backend drm-kms-egl</code></pre>
+    <p>Environment variables:</p>
+    <table class="plan-table">
+      <thead>
+        <tr><th>Variable</th><th>What it does</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><code>WAYLAND_DISPLAY=wayland-0</code></td><td>The Wayland socket the shell connects to. Needed because the command runs over SSH, outside the desktop session</td></tr>
+        <tr><td><code>XDG_RUNTIME_DIR=/run/user/$(id -u)</code></td><td>The folder that holds that socket. Also needed over SSH</td></tr>
+        <tr><td><code>BEV_STAT=1</code></td><td>Shows the fps and buffer statistics on the views and prints a <code>[stat]</code> line to the console every half second</td></tr>
+        <tr><td><code>BEV_CAMERAS=2</code></td><td>How many cameras the 360 view opens (default 2)</td></tr>
+        <tr><td><code>BEV_CONFIG=path</code></td><td>The bev_config.ini with the camera poses and calibration (default <code>bev_config.ini</code>)</td></tr>
+        <tr><td><code>BEV_LENS_DIR=path</code></td><td>Folder with the lens distortion files, so the images are undistorted before the blend</td></tr>
+        <tr><td><code>BEV_PX_PER_M=n</code></td><td>Zoom of the bird's-eye canvas in pixels per meter. Higher shows a smaller area, and it overrides the value in the config file</td></tr>
+        <tr><td><code>BEV_CAM_FPS=30</code></td><td>Frame rate the cameras are asked for by pinning the frame duration (default 30). Without a pin, auto exposure in low light dropped it to about 15</td></tr>
+        <tr><td><code>BEV_WIDTH</code>, <code>BEV_HEIGHT</code></td><td>Capture size requested from the cameras. All cameras must end up with the same size</td></tr>
+        <tr><td><code>BEV_RENDER_NODE=/dev/dri/renderD128</code></td><td>The GPU render node the buffers are allocated on. Only needed if the default pick is wrong</td></tr>
+        <tr><td><code>BEV_IMPLICIT_SYNC=1</code></td><td>Submits frames without acquire fences. A fallback for ivi-homescreen builds older than v3.0 83887302, which leaked one sync file per frame</td></tr>
+      </tbody>
+    </table>
+    <p>Shell flags (from <code>homescreen --help</code>):</p>
+    <table class="plan-table">
+      <thead>
+        <tr><th>Flag</th><th>What it does</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><code>-b, --bundle path</code></td><td>The Flutter bundle to run. <code>.</code> means the current folder (<code>~/ui</code>)</td></tr>
+        <tr><td><code>-f, --fullscreen</code></td><td>Start fullscreen</td></tr>
+        <tr><td><code>--backend name</code></td><td>Rendering backend: wayland-egl, wayland-vulkan, drm-kms-egl, drm-kms-vulkan or software. Defaults to wayland-egl inside a Wayland session, otherwise drm-kms-egl</td></tr>
+        <tr><td><code>-w, --width</code>, <code>--height</code></td><td>Size of the window in pixels</td></tr>
+        <tr><td><code>-p, --pixel-ratio n</code></td><td>Device pixel ratio, to scale the UI</td></tr>
+        <tr><td><code>-o, --output-index n</code></td><td>Which display to put the view on</td></tr>
+        <tr><td><code>-c, --disable-cursor</code></td><td>Hide the mouse pointer</td></tr>
+        <tr><td><code>-d, --debug-backend</code></td><td>Turn on backend debug logging</td></tr>
+        <tr><td><code>--shell name</code></td><td>Wayland shell protocol: auto, xdg, agl, ivi or simple</td></tr>
+        <tr><td><code>--engine-arg</code>, <code>--dart-arg</code></td><td>Pass a switch to the Flutter engine, or an argument to the Dart <code>main()</code> (can be repeated)</td></tr>
+        <tr><td><code>-h, --help</code></td><td>Print all options</td></tr>
+      </tbody>
+    </table>
+
+  </div>
+
+  <footer>
+    <span class="footer-left">© 2026 Abdulrahman · GSoC AGL</span>
+    <div class="footer-right">
+      <a href="week-17.html">Week 17</a>
+      <a href="index.html">Blog</a>
+    </div>
+  </footer>
+
+</div>
+</body>
+</html>
