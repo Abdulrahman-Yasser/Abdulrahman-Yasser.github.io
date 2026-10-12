@@ -1,0 +1,807 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Weeks 19-20 · GSoC 2026 · AGL Backup Camera</title>
+  <meta name="description" content="Weeks 19-20 progress update: ChArUco calibration in the Flutter app and on the real cameras, an AGL SDK, libcamera across branches, and every AGL change proven from a clean tree." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg:        #0d0f10;
+      --surface:   #141618;
+      --surface2:  #1c1f21;
+      --border:    rgba(255,255,255,0.08);
+      --border2:   rgba(255,255,255,0.14);
+      --text:      #e8e6e0;
+      --muted:     #8a8780;
+      --hint:      #4a4845;
+      --green:     #3fcf8e;
+      --green-dim: rgba(63,207,142,0.12);
+      --amber:     #f5a623;
+      --blue:      #5b9cf6;
+      --blue-dim:  rgba(91,156,246,0.1);
+      --red:       #f87171;
+      --mono: 'IBM Plex Mono', monospace;
+      --sans: 'IBM Plex Sans', sans-serif;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--sans);
+      font-size: 15px;
+      line-height: 1.75;
+      min-height: 100vh;
+    }
+
+    .site { max-width: 720px; margin: 0 auto; padding: 3rem 1.5rem 5rem; }
+
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 3rem;
+      padding-bottom: 1.25rem;
+      border-bottom: 0.5px solid var(--border);
+      flex-wrap: wrap;
+      gap: 0.75rem;
+    }
+    .back-link {
+      display: inline-flex; align-items: center; gap: 6px;
+      font-family: var(--mono); font-size: 12px;
+      color: var(--muted); text-decoration: none;
+      transition: color 0.15s;
+    }
+    .back-link:hover { color: var(--text); }
+    .back-link svg { width: 14px; height: 14px; }
+    .topbar-brand { font-family: var(--mono); font-size: 12px; color: var(--hint); }
+
+    .post-header { margin-bottom: 2.5rem; }
+    .post-eyebrow {
+      display: inline-flex; align-items: center; gap: 8px;
+      font-family: var(--mono); font-size: 11px;
+      color: var(--green);
+      border: 0.5px solid rgba(63,207,142,0.3);
+      background: var(--green-dim);
+      border-radius: 4px; padding: 4px 10px; margin-bottom: 1rem;
+    }
+    h1 {
+      font-family: var(--sans); font-size: clamp(22px, 4vw, 32px);
+      font-weight: 600; color: var(--text); line-height: 1.25; margin-bottom: 0.75rem;
+    }
+    .post-meta {
+      display: flex; flex-wrap: wrap; gap: 1.25rem;
+      font-family: var(--mono); font-size: 12px; color: var(--muted);
+    }
+
+    .sec-label {
+      display: flex; align-items: center; gap: 10px;
+      font-family: var(--mono); font-size: 11px; color: var(--hint);
+      letter-spacing: 0.1em; text-transform: uppercase;
+      margin: 2rem 0 1rem;
+    }
+    .sec-label::after { content: ''; flex: 1; height: 0.5px; background: var(--border); }
+
+    .achievement-list { list-style: none; display: flex; flex-direction: column; gap: 10px; margin-bottom: 1.5rem; }
+    .achievement-list li {
+      display: flex; align-items: flex-start; gap: 10px;
+      font-size: 14px; color: var(--text); line-height: 1.55;
+    }
+    .ach-icon { width: 16px; height: 16px; color: var(--green); flex-shrink: 0; margin-top: 3px; }
+
+    .prose { font-size: 15px; color: var(--text); line-height: 1.8; }
+    .prose p { margin-bottom: 1.1rem; }
+    .prose h2 {
+      font-family: var(--sans); font-size: 18px; font-weight: 500;
+      color: var(--text); margin: 2rem 0 0.75rem;
+    }
+    .prose h3 {
+      font-family: var(--sans); font-size: 15px; font-weight: 500;
+      color: var(--muted); margin: 1.5rem 0 0.5rem;
+    }
+    .prose code {
+      font-family: var(--mono); font-size: 13px;
+      background: var(--surface2); border: 0.5px solid var(--border2);
+      border-radius: 4px; padding: 2px 6px; color: var(--green);
+    }
+    .prose pre {
+      background: var(--surface); border: 0.5px solid var(--border2);
+      border-radius: 8px; padding: 1.25rem; overflow-x: auto;
+      font-family: var(--mono); font-size: 13px; color: var(--text);
+      margin: 1rem 0 1.5rem; line-height: 1.6;
+    }
+    .prose pre code { background: none; border: none; padding: 0; color: inherit; font-size: inherit; }
+    .prose a { color: var(--blue); text-decoration: none; }
+    .prose a:hover { text-decoration: underline; }
+    .prose ul, .prose ol { padding-left: 1.4rem; margin-bottom: 1rem; }
+    .prose li { margin-bottom: 0.35rem; }
+    .prose blockquote {
+      border-left: 3px solid var(--border2); padding-left: 1rem;
+      color: var(--muted); font-style: italic; margin: 1rem 0;
+    }
+    .prose figure { margin: 1.25rem 0 1.5rem; }
+    .prose figure img,
+    .prose figure video { width: 100%; border-radius: 8px; border: 0.5px solid var(--border2); display: block; }
+    .prose figure figcaption { font-family: var(--mono); font-size: 11px; color: var(--muted); margin-top: 6px; text-align: center; }
+    .media-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin: 1.25rem 0 1.5rem; align-items: start; }
+    .media-row figure { margin: 0; }
+    @media (max-width: 620px) { .media-row { grid-template-columns: 1fr; } }
+
+    .video-note {
+      background: var(--surface); border: 0.5px solid var(--border);
+      border-radius: 10px; margin: 1.25rem 0 1.5rem; overflow: hidden;
+    }
+    .video-note summary {
+      display: flex; align-items: center; gap: 8px;
+      padding: 0.85rem 1.1rem; cursor: pointer; user-select: none;
+      font-family: var(--mono); font-size: 13px; color: var(--text);
+      list-style: none;
+    }
+    .video-note summary::-webkit-details-marker { display: none; }
+    .video-note summary:hover { color: var(--green); }
+    .video-note-arrow { width: 14px; height: 14px; color: var(--muted); flex-shrink: 0; transition: transform 0.2s ease, color 0.2s ease; }
+    .video-note[open] .video-note-arrow { transform: rotate(90deg); color: var(--green); }
+    .video-note video {
+      display: block; width: 100%;
+      border-top: 0.5px solid var(--border);
+    }
+
+    .cards-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 1.5rem; }
+    @media (max-width: 540px) { .cards-row { grid-template-columns: 1fr; } }
+    .mini-card {
+      background: var(--surface); border: 0.5px solid var(--border);
+      border-radius: 10px; padding: 1rem;
+    }
+    .mini-card-label {
+      font-family: var(--mono); font-size: 10px; color: var(--hint);
+      letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 8px;
+    }
+    .mini-card-body { font-size: 13px; color: var(--text); line-height: 1.5; }
+
+    .plan-table {
+      width: 100%; border-collapse: collapse; margin: 1rem 0 1.5rem;
+      font-size: 13px;
+    }
+    .plan-table th {
+      font-family: var(--mono); font-size: 10px; color: var(--hint);
+      letter-spacing: 0.08em; text-transform: uppercase;
+      text-align: left; padding: 0 0.75rem 0.6rem;
+      border-bottom: 0.5px solid var(--border2);
+    }
+    .plan-table td {
+      padding: 0.55rem 0.75rem;
+      border-bottom: 0.5px solid var(--border);
+      color: var(--text); vertical-align: top; line-height: 1.5;
+    }
+    .plan-table tr:last-child td { border-bottom: none; }
+    .plan-table td:first-child {
+      font-family: var(--mono); font-size: 12px;
+      color: var(--muted); white-space: nowrap;
+    }
+    .plan-table td.mono { font-family: var(--mono); font-size: 12px; }
+
+    .next-week {
+      background: var(--surface); border: 0.5px solid var(--border);
+      border-left: 3px solid var(--amber); border-radius: 10px;
+      padding: 1rem 1.25rem; margin-top: 2rem;
+    }
+    .next-label { font-family: var(--mono); font-size: 11px; color: var(--amber); margin-bottom: 8px; }
+    .next-text { font-size: 14px; color: var(--text); }
+    .next-week code { white-space: nowrap; }
+    .next-list { list-style: none; display: flex; flex-direction: column; gap: 6px; margin-top: 8px; }
+    .next-list li { display: flex; align-items: flex-start; gap: 8px; font-size: 14px; color: var(--text); }
+    .next-list li::before { content: '→'; color: var(--amber); font-family: var(--mono); font-size: 12px; margin-top: 2px; flex-shrink: 0; }
+
+    .post-nav {
+      display: flex; justify-content: space-between; align-items: center;
+      margin-top: 3rem; padding-top: 1.5rem;
+      border-top: 0.5px solid var(--border);
+      flex-wrap: wrap; gap: 1rem;
+    }
+    .nav-link {
+      display: inline-flex; align-items: center; gap: 6px;
+      font-family: var(--mono); font-size: 12px;
+      color: var(--muted); text-decoration: none;
+      transition: color 0.15s;
+    }
+    .nav-link:hover { color: var(--text); }
+    .nav-link svg { width: 14px; height: 14px; }
+    .nav-spacer { flex: 1; }
+
+    footer {
+      border-top: 0.5px solid var(--border);
+      padding-top: 1.5rem; margin-top: 2rem;
+      display: flex; justify-content: space-between; align-items: center;
+      flex-wrap: wrap; gap: 0.75rem;
+    }
+    .footer-left { font-family: var(--mono); font-size: 12px; color: var(--hint); }
+    .footer-right { display: flex; gap: 14px; }
+    .footer-right a {
+      color: var(--hint); text-decoration: none;
+      font-size: 12px; font-family: var(--mono); transition: color 0.15s;
+    }
+    .footer-right a:hover { color: var(--muted); }
+  </style>
+</head>
+<body>
+<div class="site">
+
+  <nav class="topbar">
+    <a class="back-link" href="index.html">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="15 18 9 12 15 6"/></svg>
+      Back to blog
+    </a>
+    <span class="topbar-brand">gsoc-2026 / agl / weeks-19-20</span>
+  </nav>
+
+  <header class="post-header">
+    <div class="post-eyebrow">Weeks 19-20 · GSoC 2026 · AGL</div>
+    <h1>Calibration on Real Cameras, and Every AGL Change Proven From a Clean Tree</h1>
+    <div class="post-meta">
+      <span>Sep 29 – Oct 12, 2026</span>
+      <span>Abdulrahman</span>
+    </div>
+  </header>
+
+  <p class="sec-label">These two weeks</p>
+
+  <ul class="achievement-list">
+    <li>
+      <svg class="ach-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="20 6 9 17 4 12"/></svg>
+      <span>Built ChArUco calibration into the Flutter app: pick a setup, capture every camera at full resolution, check the detected corners as draggable pins (or skip), see a stitched top view with the seam errors, and save</span>
+    </li>
+    <li>
+      <svg class="ach-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="20 6 9 17 4 12"/></svg>
+      <span>Added lens calibration in the app too: hold one board in many poses, keep the good frames, fit the lens and save it</span>
+    </li>
+    <li>
+      <svg class="ach-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="20 6 9 17 4 12"/></svg>
+      <span>Made calibration its own library, <code>libbev_calib.so</code> (OpenCV and libcamera, no GPU), separate from the GPU view library, and made the two hand the cameras over safely</span>
+    </li>
+    <li>
+      <svg class="ach-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="20 6 9 17 4 12"/></svg>
+      <span>Built an SDK for the current AGL branch with OpenCV, <code>ivi-homescreen-shared</code> and libcamera in it, and a script that builds the app's libraries with it, so an app fix no longer needs a full image</span>
+    </li>
+    <li>
+      <svg class="ach-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="20 6 9 17 4 12"/></svg>
+      <span>Tested libcamera on the Pi 5 across several branches: AGL's 0.6.0, mainline v0.7.0 to v0.7.2, and the Raspberry Pi fork at <code>v0.7.0+rpt20260202</code> and <code>v0.6.0+rpt20251202</code></span>
+    </li>
+
+    <li>
+      <svg class="ach-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="20 6 9 17 4 12"/></svg>
+      <span>Ran lens and surround calibration on the Pi 5 with real cameras, and fixed what they showed: a crash when listing cameras, black stills, lens files overwriting each other, a camera losing its lens when moved, and a live view zoomed into the car</span>
+    </li>
+    <li>
+      <svg class="ach-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="20 6 9 17 4 12"/></svg>
+      <span>Added fisheye lenses, black-square and ChArUco corner boards, eight named camera positions around the car, and a pin editor with zoom, crosshairs and a "Find missing" button that guesses undetected corners from the ones it did find</span>
+    </li>
+    <li>
+      <svg class="ach-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="20 6 9 17 4 12"/></svg>
+      <span>Replaced picking cameras by their shifting libcamera index with assigning each one to a named mounting position, kept in <code>bev_config.ini</code>, settable from Settings or the layout screen; added a board reference picture so a pin can be placed by clicking where its corner is on the printed board</span>
+    </li>
+    <li>
+      <svg class="ach-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="20 6 9 17 4 12"/></svg>
+      <span>Gave the camera's plain "2D" view a fisheye mode: the same surround renderer, one camera, undistorting through the shader's lens model instead of a ground homography, zero-copy</span>
+    </li>
+    <li>
+      <svg class="ach-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="20 6 9 17 4 12"/></svg>
+      <span>Made lens calibration keep views by itself (18+ corners in a new pose) and saved every calibration's full-resolution images on the board</span>
+    </li>
+    <li>
+      <svg class="ach-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="20 6 9 17 4 12"/></svg>
+      <span>Showed a USB camera zero-copy next to the IMX219s, then moved it to a CPU path after its frames tore: the driver writes them through the CPU cache</span>
+    </li>
+    <li>
+      <svg class="ach-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="20 6 9 17 4 12"/></svg>
+      <span>Rebuilt the whole thing from a clean AGL master tree, one change per error, and proved every change on the Pi: 11 items, each with the error that made it necessary</span>
+    </li>
+  </ul>
+
+  <p class="sec-label">Details</p>
+
+  <div class="prose">
+
+    <h2>Calibration inside the app</h2>
+    <p>
+      Until now calibration meant two Python scripts on my PC (<code>calibrate_intrinsics.py</code> and
+      <code>calibrate_bev.py</code>), and the app's calibration panel was a mock with X, Y and yaw buttons.
+      Commercial 360° camera systems calibrate on the car: boards on the ground around it, every camera sees
+      some of them, the system finds the corners, and a technician can move any point that was found wrong.
+      That is what I built.
+    </p>
+
+    <h3>Two libraries</h3>
+    <p>
+      Calibration is a separate library, <code>libbev_calib.so</code>, with its own Dart package
+      (<code>flutter/bev_calib</code>) that holds the screens too. It uses OpenCV and libcamera stills on the
+      CPU only, and never runs at the same time as the GPU view library. One catch: libcamera allows one camera
+      manager per process, and a second one aborts the process. Both libraries load into the same homescreen
+      process, so each one checks the other through <code>dlopen(..., RTLD_NOLOAD)</code> and waits for its
+      manager to go before creating one. The app also unmounts every live view before it opens a calibration
+      page, and the view comes back with the new calibration afterwards.
+    </p>
+
+    <h3>Setups instead of a fixed camera count</h3>
+    <p>
+      A setup is a small layout file: which cameras take part, and where each board lies around the car. The app
+      ships six: front pair, back pair, four cameras, front and back pairs, left and back, and my bench rig. It
+      doesn't depend on the number of cameras, and the ArUco dictionary is set per board.
+    </p>
+<pre><code>[camera]
+slot = 0                  # bev_config.ini slot, also libcamera camera 0
+facing = front
+lens = imx219
+
+[board]
+dict = 4X4_100
+squares = 6x8
+square = 0.090
+marker = 0.070
+first_id = 24             # this board's markers are 24..47
+x = 1.6                   # board centre around the car, metres
+y = 3.0
+yaw = -45</code></pre>
+    <p>
+      Every board has its own marker ids (0, 24, 48 and 72 in <code>4X4_100</code>), so a camera that sees two
+      boards knows which corner belongs to which, and one printed set works for every setup. A script renders
+      the boards of a layout as PDFs at their real size.
+    </p>
+
+    <h3>The flow</h3>
+    <ol>
+      <li>Pick a setup. Each card has a sketch of the car, the cameras and where to put the boards.</li>
+      <li>Capture: a full-resolution still from every camera, then corner detection.</li>
+      <li>Check each camera: every corner is a pin, green when it fits, red when it doesn't. Tap a pin, drag it with a magnifier above the finger, or nudge it one pixel at a time. <b>Skip</b> when everything looks right.</li>
+      <li>Result: a stitched top view of all cameras, the ground error of each camera, and the error at each seam. Save.</li>
+    </ol>
+
+    <h3>Car coordinates</h3>
+    <p>
+      The homography each camera stores (<code>hb2i</code>) used to be relative to one board. With several
+      boards it is now relative to the car: origin at the car centre, X to the right, Y forward. It maps to
+      undistorted pixels, because the renderer applies the lens distortion after it, and it is saved with the
+      size of the still it was measured on. Old config files are converted when they are loaded and render
+      exactly as before. The old live-tune keys (X/G/Y and the saved offsets) are gone.
+    </p>
+
+    <h3>Checked before the board</h3>
+    <table class="plan-table">
+      <tr><th>Check</th><th>Result</th></tr>
+      <tr><td>Seam error</td><td>Bench stills of 2026-06-23: median 0.60 mm, against 1.36 mm from <code>calibrate_bev.py</code> on the same shot</td></tr>
+      <tr><td>Lens fit</td><td>87 photos: fx 1286.9 against Python's 1287.1, rms 0.210 px against 0.208 px</td></tr>
+      <tr><td>Render</td><td>A saved calibration through the real GPU pipeline: the board comes out square and both cameras line up</td></tr>
+      <tr><td>UI</td><td>An automated Flutter desktop test on the stills: pick, capture, drag a pin, result, save</td></tr>
+      <tr><td>AGL build</td><td><code>libbev_calib.so</code> builds against OpenCV 4.13 in the recipe; the package carries both libraries and the layouts</td></tr>
+    </table>
+    <p>
+      For the AGL build, the recipe gained <code>opencv</code> in <code>DEPENDS</code>, and OpenCV's default
+      features that calibration doesn't use (Python bindings, samples, gapi, GStreamer, gphoto2, TBB, GTK) are
+      removed in <code>site.conf</code>. The new image is flashed on the Pi 5.
+    </p>
+
+    <h2>An SDK for the current AGL branch</h2>
+    <p>
+      Every app change so far went through bitbake, and the image rebuilds took hours. An SDK lets me rebuild
+      only <code>libbev_view.so</code> or <code>libbev_calib.so</code> in seconds and copy it to the board. The
+      SDKs I had (<code>/opt/agl-sdk/21.90.0-*</code>) were made before the meta-flutter v3 move: they have no
+      <code>ivi-homescreen-shared</code> and no OpenCV. So the new SDK is made from the current branch, with the
+      three development packages the app needs added to its target sysroot:
+    </p>
+<pre><code>TOOLCHAIN_TARGET_TASK:append = " opencv-dev ivi-homescreen-shared-dev libcamera-dev"
+
+bitbake agl-ivi-demo-flutter -c populate_sdk</code></pre>
+    <p>
+      The SDK's cross-canadian gcc and binutils build with <code>-j1</code> to stay inside my PC's memory, and
+      an <code>at-spi2-core</code> bbappend in <code>meta-agl-flutter</code> works around a known
+      <code>nativesdk-at-spi2-core</code> build failure.
+    </p>
+    <p>
+      The first build failed in <code>nativesdk-rust</code> 1.96.1. AGL puts a Rust compiler in the SDK
+      (<code>SDK_TOOLCHAIN_LANGS = "rust"</code>), and while bootstrapping it compiles part of itself with my
+      PC's <code>gcc</code>, GCC 11 on Ubuntu 22.04, passing it <code>-fcanon-prefix-map</code>, which only
+      exists from GCC 13:
+    </p>
+<pre><code>gcc: error: unrecognized command-line option '-fcanon-prefix-map'; did you mean '-fmacro-prefix-map='?
+error: failed to run custom build command for `lzma-sys v0.1.20`</code></pre>
+    <p>
+      The app has no Rust, so the SDK leaves it out (<code>SDK_TOOLCHAIN_LANGS:remove = "rust"</code>, which only
+      changes the SDK, not the image). The second build finished:
+      <code>agl-glibc-x86_64-agl-ivi-demo-flutter-aarch64-raspberrypi5-toolchain-21.93.0.sh</code>, 1.5 GB, with
+      OpenCV 4.13, <code>ivi-homescreen-shared</code> 3.0 and libcamera in its sysroot.
+    </p>
+    <p>
+      Two things were needed to build the app with it. The SDK ships no <code>cmake</code>, so the host one runs,
+      and every lookup has to be pinned to the target sysroot, or <code>find_package(OpenCV)</code> takes my PC's
+      x86 OpenCV. And the app's CMake picks up a sibling <code>../ivi-homescreen</code> checkout when there is one,
+      which in a cross build sends it looking for an <code>emb</code> build of the shell instead of the SDK's
+      package, so a new option, <code>IHS_PROBE_SIBLING=OFF</code>, turns that off. A script,
+      <code>scripts/build-agl-sdk.sh</code>, does both and builds the two libraries:
+    </p>
+<pre><code>$ scripts/build-agl-sdk.sh
+-- ihs_shared (package)    = 1.0.0
+-- Found OpenCV: .../sysroots/aarch64-agl-linux/usr (found version "4.13.0")
+[19/22] Linking CXX shared library libbev_calib.so
+[22/22] Linking CXX shared library libbev_view.so</code></pre>
+    <p>
+      Both come out AArch64, linked against <code>libstdc++</code>, the image's libcamera and
+      <code>libihs_shared</code>, ready to copy into the app's <code>native_assets/linux/</code> folder on the
+      board. From now on an app fix is a library build and a copy, not an image.
+    </p>
+
+    <h2>libcamera across branches</h2>
+    <p>
+      In week 18 the cameras only showed up after switching libcamera to the Raspberry Pi fork. This week I
+      checked which versions actually work, to know whether AGL just needs a newer libcamera or something else.
+      The kernel is the same in every test: <code>6.18.33-v8-16k</code>.
+    </p>
+    <table class="plan-table">
+      <tr><th>libcamera</th><th>From</th><th>CFE names</th><th>On the Pi 5</th></tr>
+      <tr><td>0.6.0</td><td>AGL default, <code>libcamera_0.6.0.bb</code> in meta-openembedded (<code>14282a02</code>)</td><td>hyphens</td><td>no camera: "Unable to acquire a CFE instance"</td></tr>
+      <tr><td>v0.7.0 – v0.7.2</td><td>mainline tags, and master</td><td>hyphens</td><td>source checked, same mismatch</td></tr>
+      <tr><td>v0.7.0+rpt20260202</td><td>Raspberry Pi fork</td><td>underscores</td><td>both IMX219 detected</td></tr>
+      <tr><td>v0.6.0+rpt20251202</td><td>Raspberry Pi fork, same 0.6.0 base as AGL</td><td>underscores</td><td>built; in the image on the board now</td></tr>
+    </table>
+    <p>
+      The kernel registers <code>rp1-cfe-fe_image0</code>, <code>rp1-cfe-fe_stats</code> and
+      <code>rp1-cfe-fe_config</code>. I checked what each build looks for with <code>strings</code> on the
+      library on the board, and in the source of <code>pipeline/rpi/pisp/pisp.cpp</code> at every mainline tag:
+    </p>
+<pre><code># AGL default, libcamera 0.6.0
+$ strings /usr/lib/libcamera.so.0.6 | grep -o 'rp1-cfe-fe[-_][a-z_0-9]*' | sort -u
+rp1-cfe-fe-config
+rp1-cfe-fe-image0
+rp1-cfe-fe-stats
+
+# Raspberry Pi fork v0.7.0+rpt20260202
+$ strings /usr/lib/libcamera.so.0.7 | grep -o 'rp1-cfe-fe[-_][a-z_0-9]*' | sort -u
+rp1-cfe-fe_config
+rp1-cfe-fe_image0
+rp1-cfe-fe_stats
+$ cam -l
+1: External camera 'imx219' (/base/axi/pcie@1000120000/rp1/i2c@88000/imx219@10)
+2: External camera 'imx219' (/base/axi/pcie@1000120000/rp1/i2c@80000/imx219@10)</code></pre>
+    <p>
+      So it is not a version problem. Every mainline release up to v0.7.2 still looks for hyphens, and the fork
+      works because it matches the Raspberry Pi kernel's naming. The fork built on the same 0.6.0 as AGL is the
+      smallest change, which is why the image now uses <code>v0.6.0+rpt20251202</code>. The Raspberry Pi issue
+      raspberrypi/libcamera#298 ("Unable to acquire a CFE instance") is closed, and I still have to read how. I
+      also want to check Kurokawa-san's sandbox branch, <code>sandbox/20260925-libcamera-YP5</code>, to see
+      which libcamera it runs on a Pi.
+    </p>
+
+    <h2>Calibration on the real cameras</h2>
+    <p>
+      The calibration screens had only seen my bench stills and synthetic scenes. In week 20 they ran on the Pi 5
+      with the two IMX219s and a USB camera, and the real hardware found problems the stills never could.
+    </p>
+
+    <h3>What the real board found</h3>
+    <ul>
+      <li><b>The app crashed when opening the lens screen ("Removing media device while still in use").</b> Cause: a temporary libcamera <code>CameraManager</code> in a range-for died while the loop still used its cameras. Fix: keep the manager alive for the whole listing.</li>
+      <li><b>The USB camera's stills were black.</b> Cause: its auto exposure hadn't settled on the first frames. Fix: wait until the mean colour stops changing before taking the still.</li>
+      <li><b>The lens screen found no corners.</b> Cause: my board is a 7x5 ChArUco (35 mm squares, 26 mm markers, <code>4X4_50</code>), not the 5x8 default. Fix: 7x5 is the default now, and the screen says when the markers it sees don't fit the board fields.</li>
+      <li><b>Both cameras' lens files were saved under one name.</b> Cause: both are "imx219". Fix: lens files are named after the camera and its port, e.g. <code>imx219-i2c-88000</code>.</li>
+      <li><b>"cannot write bev_config.ini" on a fresh image.</b> Cause: the data folder didn't exist yet. Fix: saving creates it.</li>
+      <li><b>A camera moved to another position lost its fisheye correction.</b> Cause: the lens was stored with the position, not the camera. Fix: a lens moves with its camera; surround calibration also stopped overwriting it with the layout's.</li>
+      <li><b>The back pair never calibrated.</b> Cause: the single-board layouts expected marker ids 24 to 47; one printed board has 0 to 23. Fix: single-board layouts use the board's own ids; distinct ids are only for layouts with several boards on the floor.</li>
+      <li><b>A good front calibration rendered black.</b> Cause: the live view kept <code>px_per_m = 2200</code> from the June bench test: 0.75 x 0.56 m around the car centre, inside the car. Fix: below.</li>
+    </ul>
+
+    <h3>Framing the view on what the cameras cover</h3>
+    <p>
+      Saving a calibration now stores, per camera, a box around the boards it saw and the ground between them and
+      the car body. The live view frames the union of the boxes of the cameras it shows, off the car centre if
+      needed, and the blend weights and the car icon stay anchored to the car. With only the back pair, the view
+      went from 2200 px/m (nothing visible) to 543 px/m on a 1.36 x 2.27 m area behind the car, with the board in
+      the middle.
+    </p>
+
+    <h3>The calibration library in more detail</h3>
+    <p>
+      <code>libbev_calib.so</code> is where all of this lives: it fits a lens, detects boards, and solves a
+      camera's homography from car-frame metres to undistorted pixels. The pieces below are what got added to
+      it this week, each because the stills, or the real board, showed the previous version wasn't enough.
+    </p>
+    <ul>
+      <li><b>Fisheye lenses:</b> a lens file can say <code>model = fisheye</code> (<code>cv::fisheye</code>,
+        k1 to k4) instead of pinhole. The surround solve undistorts with whichever model the camera's lens
+        file names, and the renderer's shader takes a lens mode (none, pinhole, fisheye) so the same frame
+        path draws both. The homography solve also changed to minimise raw-pixel reprojection error rather than
+        a plain least-squares fit, because far-out fisheye corners need to count for less than ones measured
+        cleanly near the centre; the fix also caught a sign bug that blanked any camera with the car centre
+        behind it.
+      </li>
+      <li><b>The fisheye "2D" view:</b> this one is in <code>bev_view</code>, not the calibration screens, but
+        it's the same lens model and it only makes sense once a fisheye lens is calibrated. The camera's plain
+        2D preview used to be a placeholder; it now runs through the surround renderer with a single camera and,
+        instead of a ground homography, a mapping onto the camera's own undistorted image, zoomed out to keep
+        most of the field in frame. A pinhole camera still shows its plain view there. Zero-copy either way.
+      </li>
+      <li><b>Boards:</b> black squares or ChArUco boards at the corners, with a ChArUco board in the middle
+        telling the app where to look. A square has no corners to detect directly, so its four corners are
+        found by resampling a top-down view of the ground where the already-found corners predict it should
+        be; ChArUco boards too oblique or too far out at a fisheye's rim get the same top-view retry when they
+        don't decode normally.
+      </li>
+      <li><b>Positions, not camera indices:</b> libcamera hands cameras back in whatever order it detects them,
+        which shifts when one is unplugged and replugged, so the app used to hard-code "front = camera 0".
+        <code>bev_config.ini</code> now has a section per named mounting position (front, front-right, right,
+        back-right, back, back-left, left, front-left) holding that position's camera by its libcamera id, set
+        from Settings &gt; Cameras (which shows a snapshot of each connected camera) or from the layout screen,
+        where every position the chosen layout needs gets a dropdown of the cameras actually connected. A lens
+        calibration follows its camera to a new position instead of staying with the old one.
+      </li>
+      <li><b>Pin editor:</b> wheel, pinch or a double-click on the selected pin zoom in on it; the view also
+        pans. Pins are drawn as open + or x crosshairs, full size even on a plain black square (numbered 0 to 3
+        around it, since the square itself has no printed marker to anchor on). A corner the detector missed is
+        red, one it found but flagged as an outlier is purple, so both stand out from the pins that are already
+        good.
+      </li>
+      <li><b>"Find missing":</b> a button next to Re-detect/Retake that takes the corners actually found on a
+        board and uses the board's known geometry to predict where the rest of its corners should be, dropping
+        a grey pin on each one to drag into place by hand. It only predicts for a board with at least two
+        corners the camera actually found, and skips any prediction that lands in the black border around a
+        fisheye's image circle, so a side camera doesn't get phantom pins for a board out past where it can see
+        at all.
+      </li>
+      <li><b>Board reference picture:</b> below Re-detect/Retake, the selected pin's board is drawn as printed,
+        with its marker ids and every pin on it in the same colour and shape as on the camera image. Clicking a
+        corner there selects its pin, or, if that corner has none yet, places one with the next click on the
+        camera image. The list only offers boards within 85&deg; of the camera's facing, plus any it already
+        found corners on, named by where they lie around the car (Front, Front-left, ...) instead of by index.
+      </li>
+      <li><b>Many setups, deliberately:</b> the app ships six layouts (front pair, back pair, four cameras,
+        front and back pairs, left and back, my bench rig), and the layout picker stops offering any of them
+        once a calibration is started from offline stills, since those stills were shot for one specific
+        layout and silently picking a different one leaves its boards undetected.
+      </li>
+      <li><b>Auto capture:</b> the lens screen keeps a view by itself once it sees 18 or more corners with the board moved by 8% of the frame or 15% nearer or farther, at most every 1.5 s.</li>
+      <li><b>Saved images:</b> every run keeps its full-resolution stills and layout in <code>~/.config/surround_view/captures/</code>, so a calibration can be rerun on my PC exactly as it ran on the board. That is how I found the marker-id and zoom problems above.</li>
+    </ul>
+    <p>
+      For testing without hardware, scripts render synthetic scenes (car, boards, pinhole or fisheye cameras,
+      optional damage that hides corners) with their ground truth, and a desktop build of the screens loads them.
+    </p>
+
+    <h3>Recording the board's screen</h3>
+    <p>
+      Everything above was shown so far as stills or described in words, because the only way I had to capture
+      the Pi's screen was photographing the monitor, which is never clean enough to show UI text or a fast
+      live view. An HDMI video capture dongle fixes that: it sits between the Pi's HDMI output and a phone, and
+      presents the video to whatever it's plugged into as a plain UVC webcam, no drivers or app on the Pi side.
+      A USB-C OTG adapter lets a phone take that UVC feed directly, so any screen-recorder app on the phone
+      records the Pi's actual framebuffer.
+    </p>
+    <div class="media-row">
+      <figure>
+        <img src="public/week19/week19-hdmi-capture-box.jpeg" alt="HDMI video capture dongle and USB-C OTG adapter" />
+        <figcaption>The capture dongle and the OTG adapter it needs to feed a phone</figcaption>
+      </figure>
+      <figure>
+        <img src="public/week19/week19-hdmi-capture-rig.jpeg" alt="The HDMI capture dongle wired from the Pi's HDMI output into a phone over USB-C OTG" />
+        <figcaption>Wired in: Pi HDMI out → capture dongle → OTG → phone, recording as a plain UVC source</figcaption>
+      </figure>
+    </div>
+    <p>
+      The two lens calibration recordings and the surround calibration one below were all captured this way.
+    </p>
+
+    <h3>Lens calibration, live on the board</h3>
+    <p>
+      Fitting a fisheye's distortion needs the board held in many different poses, near, far, tilted, and out
+      to the rim where a fisheye stretches the image the most. These two recordings are that screen running
+      live on the Pi, calibrating the front-right IMX219's fisheye lens: the corner count and quality badge
+      updating per frame, auto capture keeping a view by itself once it sees enough corners in a new pose, and
+      the coverage dots from every kept view so far showing which parts of the frame still need a pose.
+    </p>
+    <div class="media-row">
+      <figure>
+        <video src="public/week19/week19-fisheye-calib-1.mp4" controls preload="metadata"></video>
+        <figcaption>Fisheye lens calibration, live: early poses, 16 corners kept</figcaption>
+      </figure>
+      <figure>
+        <video src="public/week19/week19-fisheye-calib-2.mp4" controls preload="metadata"></video>
+        <figcaption>Fisheye lens calibration, live: coverage dots from earlier poses, spread still too thin</figcaption>
+      </figure>
+    </div>
+
+    <h3>Surround calibration and the overlap</h3>
+    <p>
+      The companion recording is the other calibration screen: boards checked camera by camera (this is where
+      "Find missing" and the board reference picture from above are actually used), ending on the 360° tab,
+      where the cameras are stitched into the top view and the seam between two adjacent cameras, back-left
+      and back-right here, shows as the overlap in their blended region.
+    </p>
+    <figure>
+      <video src="public/week19/week19-overlap-calibration.mp4" controls preload="metadata"></video>
+      <figcaption>Surround calibration end to end, finishing on the stitched 360° view and its camera overlap</figcaption>
+    </figure>
+
+    <h2>A USB camera, and why its frames tore</h2>
+    <p>
+      The live views now take a USB (UVC) camera as well. Its 640x480 YUYV frames import into the GPU zero-copy
+      like the IMX219's NV12, with a CPU conversion to NV12 as fallback. It worked, but moving objects showed
+      black rows.
+    </p>
+    <p>
+      My first guess was a requeue race: a buffer going back to the camera while the GPU still read it. Each draw
+      now leaves a GL fence, and a buffer is only requeued once its fence has signalled. The rows stayed. The real
+      cause is cache coherency: <code>uvcvideo</code> copies the USB packets into the frame with the CPU, so the
+      data sits in the CPU cache, and the Pi 5's GPU reads RAM without looking into that cache. Parts of a frame
+      that hadn't been flushed yet showed old data, in cache-line rows, only where the picture moved. The IMX219s
+      never do this, because the ISP writes their frames by DMA. YUYV frames now go through the CPU path by
+      default (about 0.6 MB per frame, cheap), the IMX219s stay zero-copy, and <code>packed_zero_copy=1</code>
+      turns the old path back on.
+    </p>
+
+    <h2>How one recipe builds the app and its two libraries</h2>
+    <p>
+      Before the change list, it helps to know what the recipe actually builds. <code>flutter-surround-view</code>
+      is one recipe that produces one package, but inside it are one Flutter application and two C++ libraries
+      from the same repository:
+    </p>
+<pre><code>flutter-surround-view (one recipe, one package)
+├── Flutter app (Dart)       runs in flutter-auto
+├── libbev_view.so  (C++)    cameras, GPU, shaders
+└── libbev_calib.so (C++)    calibration, OpenCV</code></pre>
+    <p>
+      The command-line capture tool from the same repository is not part of it.
+    </p>
+
+    <h3>Who builds what</h3>
+    <p>
+      The recipe fetches the whole repository at the commit in <code>SRCREV</code>. In <code>do_compile</code>,
+      meta-flutter runs <code>flutter build bundle</code>. The app's two Dart packages, <code>bev_view</code> and
+      <code>bev_calib</code>, each have a native-assets build hook (<code>hook/build.dart</code>), and Flutter runs
+      them during that build. Each hook runs CMake on the repository: one with <code>-DENABLE_IHS_PV=ON</code>
+      builds <code>libbev_view.so</code>, the other with <code>-DENABLE_CALIB=ON</code> builds
+      <code>libbev_calib.so</code>. Flutter packs both into the app's
+      <code>data/flutter_assets/native_assets/linux/</code> folder. The shaders are strings inside
+      <code>gpu_renderer.cpp</code>, so they are simply part of <code>libbev_view.so</code>.
+    </p>
+
+    <h3>How the libraries find libcamera, GBM, OpenCV...</h3>
+    <p>
+      Yocto never decides what my code links. It makes sure the right libraries exist, and that CMake finds the ARM
+      copies instead of my PC's:
+    </p>
+    <table class="plan-table">
+      <tr><th>Who</th><th>Does what</th></tr>
+      <tr><td>Recipe</td><td><code>DEPENDS</code> lists libcamera, libdrm, GBM, EGL, GLES, OpenCV, <code>ivi-homescreen-shared</code>... BitBake builds them first and copies their headers, libraries and <code>.pc</code> files into this recipe's own <code>recipe-sysroot</code>. Only what is listed gets in.</td></tr>
+      <tr><td>Class</td><td><code>flutter-app-native</code> gives the hooks the cross compiler, a CMake toolchain file and <code>pkg-config</code>, all aimed at that sysroot.</td></tr>
+      <tr><td>CMake</td><td><code>pkg_check_modules(LIBCAMERA REQUIRED IMPORTED_TARGET libcamera)</code> reads <code>libcamera.pc</code> from the sysroot, and <code>target_link_libraries</code> picks what each library links, exactly as on my PC.</td></tr>
+      <tr><td>Packaging</td><td>After the build, Yocto reads the libraries each <code>.so</code> needs (<code>libcamera.so.0.6</code>, <code>libgbm.so.1</code>...) and adds the packages that provide them to the image by itself.</td></tr>
+    </table>
+    <p>
+      Two of this week's build errors came straight from this. Without <code>DEPENDS</code>, CMake said
+      <code>Package 'libcamera' not found</code>, because nothing had put it in the sysroot. And with
+      <code>DEPENDS =</code> instead of <code>+=</code>, my list replaced the one the class had set, the Flutter
+      engine dropped out of the sysroot, and <code>engine_sdk.zip</code> was missing.
+    </p>
+
+    <h3>How the app reaches the libraries</h3>
+    <p>
+      Flutter doesn't link the libraries when it builds. The Dart code declares the C functions with
+      <code>@Native</code>, the build writes a <code>NativeAssetsManifest.json</code> that maps
+      <code>bev_view</code> to <code>libbev_view.so</code> and <code>bev_calib</code> to <code>libbev_calib.so</code>
+      by file name, and the engine loads each library (<code>dlopen</code>) and looks the function up the first time
+      the app calls it. That is why a missing library path didn't break the build and only failed on the Pi, with
+      "Couldn't resolve native function". <code>libbev_view.so</code> has a second connection: it registers its
+      camera view with the shell, <code>flutter-auto</code>, through <code>ivi-homescreen-shared</code>'s C
+      interface. That registration is what failed with <code>-4</code> until platform views were turned on.
+    </p>
+
+    <h3>What makes it rebuild</h3>
+    <p>
+      BitBake doesn't watch my source files. Every task has a signature, a hash of its inputs and of the tasks
+      before it, and the input that stands for my code is <code>SRCREV</code>. A shader change and a calibration
+      change take the same path: commit, push, put the new hash in <code>SRCREV</code>, build. The new
+      <code>SRCREV</code> changes <code>do_fetch</code>'s signature, and with it every task after it, up to the
+      image. Everything else comes from the cache. Since one <code>do_compile</code> builds the Dart code and both
+      libraries, any change rebuilds all three, from a fresh checkout. Without a new <code>SRCREV</code> nothing
+      rebuilds and the change silently never appears. For quick work there are two shortcuts:
+      <code>devtool modify</code> makes the recipe build from a local folder, and the SDK script builds just one
+      library to copy onto the board.
+    </p>
+
+    <h2>Every AGL change, proven from a clean tree</h2>
+    <p>
+      Before asking my mentors what can go to Gerrit, I wanted to know exactly which changes my app needs from AGL,
+      and why. My working tree had collected changes over weeks, some of them maybe unnecessary. So I started
+      again from a clean AGL master checkout, sharing only the download and sstate caches, and added one change at
+      a time, only when a build or the board showed an error that needed it.
+    </p>
+    <ol>
+      <li>Unmodified AGL master builds <code>agl-ivi-demo-flutter</code> for the Pi 5 and boots to the homescreen.</li>
+      <li>Add only my recipe and the image line, build, read the first error.</li>
+      <li>Make the smallest change that fixes it, rebuild, and write down the error, the change, why, and where it belongs.</li>
+      <li>Repeat until the image builds, then do the same on the board for every runtime problem, testing each fix on its own.</li>
+    </ol>
+
+    <h3>The changes, most important first</h3>
+    <ol>
+      <li><b>meta-flutter <code>450ea5b3</code> to v3 <code>5d4ba958</code> (local manifest)</b>. Without it: <code>Could not inherit file classes/flutter-app-native.bbclass</code>; <code>ivi-homescreen-shared</code> only exists in v3</li>
+      <li><b>ivi-homescreen <code>131cbc37</code> to <code>3d7a967</code>, plugins <code>19f03e2</code></b>. Without it: with platform views on, <code>vulkan_backing_store.cc</code> fails: <code>use of undeclared identifier 'malloc'</code></li>
+      <li><b><code>flutter-auto</code> with PACKAGECONFIG <code>compositor</code></b>. Without it: every camera view black: <code>register_factory('views/bev-view') failed: -4</code>, <code>IHS_PV_ERR_NO_REGISTRY</code></li>
+      <li><b><code>activate-by-default=true</code> in agl-compositor (workaround)</b>. Without it: tapping the app does nothing; the activation race below</li>
+      <li><b>Homescreen <code>--window-type BG</code></b>. Without it: black screen after boot: <code>Window Type: NORMAL</code></li>
+      <li><b>App <code>--shell xdg</code> (drop-in for my app only)</b>. Without it: <code>agl_shell already in use by another client</code>, app exits</li>
+      <li><b>libcamera: the Raspberry Pi fork on <code>raspberrypi5</code></b>. Without it: no cameras: the kernel names <code>rp1-cfe-fe_image0</code>, libcamera looks for <code>rp1-cfe-fe-image0</code></li>
+      <li><b>Camera overlays, <code>dtoverlay=imx219,cam0/cam1</code></b>. Without it: no <code>rp1-cfe</code> media device at all</li>
+      <li><b>Homescreen: <code>objective_c</code> pinned to 9.4.1</b>. Without it: <code>objective_c-9.6.2/hook/build.dart: Member not found: 'arm64e'</code></li>
+      <li><b><code>license-format</code> as a warning</b>. Without it: 42 meta-flutter v3 recipes use SPDX <code>AND</code>, which AGL's oe-core rejects</li>
+      <li><b>Recipe: <code>LD_LIBRARY_PATH</code> in <code>/etc/default/surround_view</code></b>. Without it: <code>Couldn't resolve native function 'bev_calib_...'</code></li>
+    </ol>
+    <p>
+      Inside my recipe a few more lines were proven the same way: <code>DEPENDS +=</code> (with plain
+      <code>=</code> the Flutter engine fell out of the sysroot and <code>engine_sdk.zip</code> went missing), the
+      native library built against <code>libstdc++</code> like libcamera (with libc++, every libcamera call is an
+      undefined <code>std::__1</code> symbol), and <code>PUBSPEC_IGNORE_LOCKFILE</code> until my lockfile is
+      regenerated with Flutter 3.47. Two things from my old tree turned out not to be needed:
+      <code>RASPBERRYPI_CAMERA_V2</code> (it only adds a duplicate overlay line) and disabling
+      <code>wireplumber@video-capture</code>.
+    </p>
+
+    <h3>The activation race</h3>
+    <p>
+      The most interesting one. With AGL's default <code>activate-by-default=false</code>, a new app window stays
+      hidden until the homescreen asks agl-compositor to show it. On the final image:
+    </p>
+<pre><code>16:10:12.283  gRPC:proxy:ActivateApp() activating app surround_view on output
+16:10:12.296  Added surface 0x55560f9068d0, app_id surround_view to pending list
+16:10:12.454  Checking pending surface 0x55560f9068d0, app_id surround_view
+16:10:12.454  Refusing to activate surface role 1, app_id surround_view, type regular</code></pre>
+    <p>
+      The homescreen sends <code>ActivateApp</code> as soon as applaunchd reports the app started, 13 ms before the
+      app has a window. <code>ivi_layout_activate()</code> in agl-compositor's <code>src/layout.c</code> finds no
+      surface with that app id and returns without a word. When the window appears there is nothing pending, so
+      it is hidden. Tapping again only gets "status: started" back on the homescreen, and no new
+      <code>ActivateApp</code> is sent. <code>activate-by-default=true</code> makes the compositor show the window
+      by itself, which hides the race but also lets any app pop up when it starts. The real fix belongs in the
+      compositor (keep an activation for an app with no window yet) or in the homescreen (activate once the window
+      exists, or again on a tap).
+    </p>
+    <p>
+      The full list, with every error, went to Joel together with the questions: whether AGL moves to meta-flutter
+      v3 (master <code>5eb7d8d</code> already pins ivi-homescreen <code>b7646dc</code> and plugins
+      <code>19f03e2</code>), platform views in <code>flutter-auto</code>, the race, and where the Pi 5 libcamera
+      fork should live.
+    </p>
+
+  </div>
+
+  <div class="next-week">
+    <p class="next-label">Next week →</p>
+    <ul class="next-list">
+      <li><span>Go through Joel's answers and decide which changes go to Gerrit with the recipe</span></li>
+      <li><span>Try meta-flutter master <code>5eb7d8d</code> without my ivi-homescreen pins, then the newest ivi-homescreen on top</span></li>
+      <li><span>Regenerate the app's <code>pubspec.lock</code> with Flutter 3.47 and drop <code>PUBSPEC_IGNORE_LOCKFILE</code></span></li>
+      <li><span>Enter the real rig size and board positions in the layouts, so front and back join correctly</span></li>
+    </ul>
+  </div>
+
+  <nav class="post-nav">
+    <a class="nav-link" href="week-18.html">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="15 18 9 12 15 6"/></svg>
+      Week 18
+    </a>
+    <span class="nav-spacer"></span>
+  </nav>
+
+  <footer>
+    <span class="footer-left">© 2026 Abdulrahman · GSoC AGL</span>
+    <div class="footer-right">
+      <a href="https://github.com/Abdulrahman-Yasser" target="_blank">GitHub</a>
+      <a href="https://www.automotivelinux.org/" target="_blank">AGL</a>
+      <a href="run-flags.html">Run flags</a>
+      <a href="index.html">Blog</a>
+    </div>
+  </footer>
+
+</div>
+</body>
+</html>

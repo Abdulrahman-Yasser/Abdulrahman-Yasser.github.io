@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Week 18 · GSoC 2026 · AGL Backup Camera</title>
+  <meta name="description" content="Week 18 progress update: building the AGL Backup Camera app inside the AGL image, every build problem and every change." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg:        #0d0f10;
+      --surface:   #141618;
+      --surface2:  #1c1f21;
+      --border:    rgba(255,255,255,0.08);
+      --border2:   rgba(255,255,255,0.14);
+      --text:      #e8e6e0;
+      --muted:     #8a8780;
+      --hint:      #4a4845;
+      --green:     #3fcf8e;
+      --green-dim: rgba(63,207,142,0.12);
+      --amber:     #f5a623;
+      --blue:      #5b9cf6;
+      --blue-dim:  rgba(91,156,246,0.1);
+      --red:       #f87171;
+      --mono: 'IBM Plex Mono', monospace;
+      --sans: 'IBM Plex Sans', sans-serif;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--sans);
+      font-size: 15px;
+      line-height: 1.75;
+      min-height: 100vh;
+    }
+
+    .site { max-width: 720px; margin: 0 auto; padding: 3rem 1.5rem 5rem; }
+
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 3rem;
+      padding-bottom: 1.25rem;
+      border-bottom: 0.5px solid var(--border);
+      flex-wrap: wrap;
+      gap: 0.75rem;
+    }
+    .back-link {
+      display: inline-flex; align-items: center; gap: 6px;
+      font-family: var(--mono); font-size: 12px;
+      color: var(--muted); text-decoration: none;
+      transition: color 0.15s;
+    }
+    .back-link:hover { color: var(--text); }
+    .back-link svg { width: 14px; height: 14px; }
+    .topbar-brand { font-family: var(--mono); font-size: 12px; color: var(--hint); }
+
+    .post-header { margin-bottom: 2.5rem; }
+    .post-eyebrow {
+      display: inline-flex; align-items: center; gap: 8px;
+      font-family: var(--mono); font-size: 11px;
+      color: var(--green);
+      border: 0.5px solid rgba(63,207,142,0.3);
+      background: var(--green-dim);
+      border-radius: 4px; padding: 4px 10px; margin-bottom: 1rem;
+    }
+    h1 {
+      font-family: var(--sans); font-size: clamp(22px, 4vw, 32px);
+      font-weight: 600; color: var(--text); line-height: 1.25; margin-bottom: 0.75rem;
+    }
+    .post-meta {
+      display: flex; flex-wrap: wrap; gap: 1.25rem;
+      font-family: var(--mono); font-size: 12px; color: var(--muted);
+    }
+
+    .sec-label {
+      display: flex; align-items: center; gap: 10px;
+      font-family: var(--mono); font-size: 11px; color: var(--hint);
+      letter-spacing: 0.1em; text-transform: uppercase;
+      margin: 2rem 0 1rem;
+    }
+    .sec-label::after { content: ''; flex: 1; height: 0.5px; background: var(--border); }
+
+    .achievement-list { list-style: none; display: flex; flex-direction: column; gap: 10px; margin-bottom: 1.5rem; }
+    .achievement-list li {
+      display: flex; align-items: flex-start; gap: 10px;
+      font-size: 14px; color: var(--text); line-height: 1.55;
+    }
+    .ach-icon { width: 16px; height: 16px; color: var(--green); flex-shrink: 0; margin-top: 3px; }
+
+    .prose { font-size: 15px; color: var(--text); line-height: 1.8; }
+    .prose p { margin-bottom: 1.1rem; }
+    .prose h2 {
+      font-family: var(--sans); font-size: 18px; font-weight: 500;
+      color: var(--text); margin: 2rem 0 0.75rem;
+    }
+    .prose h3 {
+      font-family: var(--sans); font-size: 15px; font-weight: 500;
+      color: var(--muted); margin: 1.5rem 0 0.5rem;
+    }
+    .prose code {
+      font-family: var(--mono); font-size: 13px;
+      background: var(--surface2); border: 0.5px solid var(--border2);
+      border-radius: 4px; padding: 2px 6px; color: var(--green);
+    }
+    .prose pre {
+      background: var(--surface); border: 0.5px solid var(--border2);
+      border-radius: 8px; padding: 1.25rem; overflow-x: auto;
+      font-family: var(--mono); font-size: 13px; color: var(--text);
+      margin: 1rem 0 1.5rem; line-height: 1.6;
+    }
+    .prose pre code { background: none; border: none; padding: 0; color: inherit; font-size: inherit; }
+    .prose a { color: var(--blue); text-decoration: none; }
+    .prose a:hover { text-decoration: underline; }
+    .prose ul, .prose ol { padding-left: 1.4rem; margin-bottom: 1rem; }
+    .prose li { margin-bottom: 0.35rem; }
+    .prose blockquote {
+      border-left: 3px solid var(--border2); padding-left: 1rem;
+      color: var(--muted); font-style: italic; margin: 1rem 0;
+    }
+    .prose figure { margin: 1.25rem 0 1.5rem; }
+    .prose figure img,
+    .prose figure video { width: 100%; border-radius: 8px; border: 0.5px solid var(--border2); display: block; }
+    .prose figure figcaption { font-family: var(--mono); font-size: 11px; color: var(--muted); margin-top: 6px; text-align: center; }
+    .media-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin: 1.25rem 0 1.5rem; align-items: start; }
+    .media-row figure { margin: 0; }
+    @media (max-width: 620px) { .media-row { grid-template-columns: 1fr; } }
+
+    .video-note {
+      background: var(--surface); border: 0.5px solid var(--border);
+      border-radius: 10px; margin: 1.25rem 0 1.5rem; overflow: hidden;
+    }
+    .video-note summary {
+      display: flex; align-items: center; gap: 8px;
+      padding: 0.85rem 1.1rem; cursor: pointer; user-select: none;
+      font-family: var(--mono); font-size: 13px; color: var(--text);
+      list-style: none;
+    }
+    .video-note summary::-webkit-details-marker { display: none; }
+    .video-note summary:hover { color: var(--green); }
+    .video-note-arrow { width: 14px; height: 14px; color: var(--muted); flex-shrink: 0; transition: transform 0.2s ease, color 0.2s ease; }
+    .video-note[open] .video-note-arrow { transform: rotate(90deg); color: var(--green); }
+    .video-note video {
+      display: block; width: 100%;
+      border-top: 0.5px solid var(--border);
+    }
+
+    .cards-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 1.5rem; }
+    @media (max-width: 540px) { .cards-row { grid-template-columns: 1fr; } }
+    .mini-card {
+      background: var(--surface); border: 0.5px solid var(--border);
+      border-radius: 10px; padding: 1rem;
+    }
+    .mini-card-label {
+      font-family: var(--mono); font-size: 10px; color: var(--hint);
+      letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 8px;
+    }
+    .mini-card-body { font-size: 13px; color: var(--text); line-height: 1.5; }
+
+    .plan-table {
+      width: 100%; border-collapse: collapse; margin: 1rem 0 1.5rem;
+      font-size: 13px;
+    }
+    .plan-table th {
+      font-family: var(--mono); font-size: 10px; color: var(--hint);
+      letter-spacing: 0.08em; text-transform: uppercase;
+      text-align: left; padding: 0 0.75rem 0.6rem;
+      border-bottom: 0.5px solid var(--border2);
+    }
+    .plan-table td {
+      padding: 0.55rem 0.75rem;
+      border-bottom: 0.5px solid var(--border);
+      color: var(--text); vertical-align: top; line-height: 1.5;
+    }
+    .plan-table tr:last-child td { border-bottom: none; }
+    .plan-table td:first-child {
+      font-family: var(--mono); font-size: 12px;
+      color: var(--muted); white-space: nowrap;
+    }
+    .plan-table td.mono { font-family: var(--mono); font-size: 12px; }
+
+    .next-week {
+      background: var(--surface); border: 0.5px solid var(--border);
+      border-left: 3px solid var(--amber); border-radius: 10px;
+      padding: 1rem 1.25rem; margin-top: 2rem;
+    }
+    .next-label { font-family: var(--mono); font-size: 11px; color: var(--amber); margin-bottom: 8px; }
+    .next-text { font-size: 14px; color: var(--text); }
+    .next-week code { white-space: nowrap; }
+    .next-list { list-style: none; display: flex; flex-direction: column; gap: 6px; margin-top: 8px; }
+    .next-list li { display: flex; align-items: flex-start; gap: 8px; font-size: 14px; color: var(--text); }
+    .next-list li::before { content: '→'; color: var(--amber); font-family: var(--mono); font-size: 12px; margin-top: 2px; flex-shrink: 0; }
+
+    .post-nav {
+      display: flex; justify-content: space-between; align-items: center;
+      margin-top: 3rem; padding-top: 1.5rem;
+      border-top: 0.5px solid var(--border);
+      flex-wrap: wrap; gap: 1rem;
+    }
+    .nav-link {
+      display: inline-flex; align-items: center; gap: 6px;
+      font-family: var(--mono); font-size: 12px;
+      color: var(--muted); text-decoration: none;
+      transition: color 0.15s;
+    }
+    .nav-link:hover { color: var(--text); }
+    .nav-link svg { width: 14px; height: 14px; }
+    .nav-spacer { flex: 1; }
+
+    footer {
+      border-top: 0.5px solid var(--border);
+      padding-top: 1.5rem; margin-top: 2rem;
+      display: flex; justify-content: space-between; align-items: center;
+      flex-wrap: wrap; gap: 0.75rem;
+    }
+    .footer-left { font-family: var(--mono); font-size: 12px; color: var(--hint); }
+    .footer-right { display: flex; gap: 14px; }
+    .footer-right a {
+      color: var(--hint); text-decoration: none;
+      font-size: 12px; font-family: var(--mono); transition: color 0.15s;
+    }
+    .footer-right a:hover { color: var(--muted); }
+  </style>
+</head>
+<body>
+<div class="site">
+
+  <nav class="topbar">
+    <a class="back-link" href="index.html">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="15 18 9 12 15 6"/></svg>
+      Back to blog
+    </a>
+    <span class="topbar-brand">gsoc-2026 / agl / week-18</span>
+  </nav>
+
+  <header class="post-header">
+    <div class="post-eyebrow">Week 18 · GSoC 2026 · AGL</div>
+    <h1>Building the App Inside AGL: Every Problem and Every Change</h1>
+    <div class="post-meta">
+      <span>Sep 22 – Sep 28, 2026</span>
+      <span>Abdulrahman</span>
+    </div>
+  </header>
+
+  <p class="sec-label">This week</p>
+
+  <ul class="achievement-list">
+    <li>
+      <svg class="ach-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="20 6 9 17 4 12"/></svg>
+      <span>Wrote the Yocto recipes for the camera application in <code>meta-agl-demo</code>: <code>agl-backup-camera</code> (the library and a CLI test tool) and <code>flutter-surround-view</code>, the AGL app entry point built on the <code>agl-app-flutter</code> template</span>
+    </li>
+    <li>
+      <svg class="ach-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="20 6 9 17 4 12"/></svg>
+      <span>Got the whole <code>agl-ivi-demo-flutter</code> image for the Raspberry Pi 5 building on AGL master with the app inside, working through every build failure in the order it showed up</span>
+    </li>
+    <li>
+      <svg class="ach-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="20 6 9 17 4 12"/></svg>
+      <span>Moved the Flutter side to meta-flutter's v3 generation, the only one with the platform-view API (<code>ivi-homescreen-shared</code>) the app needs, and fixed what v3 and AGL's layers disagree on</span>
+    </li>
+    <li>
+      <svg class="ach-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="20 6 9 17 4 12"/></svg>
+      <span>Kept every machine-local setting out of <code>local.conf</code> and out of the AGL layers: one <code>site.conf</code>, one repo local manifest and one small local layer</span>
+    </li>
+    <li>
+      <svg class="ach-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="20 6 9 17 4 12"/></svg>
+      <span>Wrote down every change needed to build the app with AGL, where each one lives today, and the questions for my mentors before anything goes to Gerrit</span>
+    </li>
+  </ul>
+
+  <p class="sec-label">Details</p>
+
+  <div class="prose">
+
+    <h2>Why this post</h2>
+    <p>
+      Before I push anything to AGL's Gerrit I want my mentors to see the whole picture: what it took to build
+      the app inside the AGL image, which of those changes belong to the app, which belong to AGL's layers, and
+      which are only workarounds on my machine. So this week is only about the build. Every problem is written
+      the same way: what failed, why, the fix, and where the fix lives now.
+    </p>
+    <p>
+      The target is <code>agl-ivi-demo-flutter</code> for <code>raspberrypi5</code>, from AGL master, with
+      the build folder generated by:
+    </p>
+<pre><code>source meta-agl/scripts/aglsetup.sh -f -m raspberrypi5 -b raspberrypi5 \
+    agl-app-framework agl-demo agl-devel agl-flutter \
+    agl-package-management agl-pipewire agl-selinux</code></pre>
+
+    <h2>1. The recipe itself</h2>
+    <ul>
+      <li><b>Wrong build system.</b> The first recipe inherited <code>meson</code>. The project builds with CMake, so it inherits <code>cmake pkgconfig</code>.</li>
+      <li><b>A typo in DEPENDS.</b> <code>virtual/libgm</code> instead of <code>virtual/libgbm</code>.</li>
+      <li><b>Submodules not fetched.</b> The repository has two (<code>stb</code> and <code>wayland-cxx-scanner</code>), so <code>SRC_URI</code> uses <code>gitsm://</code>, which reads <code>.gitmodules</code>.</li>
+      <li><b>No license.</b> The repository had no <code>LICENSE</code> file, so the license check could not pass. I added Apache-2.0 and put its real md5 in <code>LIC_FILES_CHKSUM</code>.</li>
+      <li><b>Missing build dependencies.</b> <code>CMakeLists.txt</code> runs its <code>pkg_check_modules(... REQUIRED)</code> calls at the top, for every target. So even the Flutter recipe, which only builds the platform view, has to list GStreamer in <code>DEPENDS</code>.</li>
+    </ul>
+
+    <h2>2. After repo sync: the tree moved under me</h2>
+    <ul>
+      <li><b>No more <code>rpi-libcamera</code> and <code>rpicam-apps</code>.</b> meta-raspberrypi dropped its own libcamera fork and now only adds a <code>libcamera_%.bbappend</code> that enables the Pi pipelines on the upstream recipe. The recipe depends on <code>libcamera</code> now.</li>
+      <li><b>ffmpeg and rpidistro-ffmpeg</b> tried to install the same files. A pre-existing AGL issue, not caused by the app.</li>
+      <li><b>Kuksa needs a newer Rust.</b> <code>kuksa-databroker</code> needs rustc 1.96 and the tree has 1.94.1, so the <code>agl-kuksa-val</code> feature is left out of the build.</li>
+      <li><b>A stale Flutter pub cache.</b> <code>flutter-ics-homescreen</code> failed with <code>flutter pub get --enforce-lockfile --offline</code> (exit 65). meta-flutter keeps the cache archive name in a marker file, <code>PUB_CACHE_ARCHIVE</code>, and reuses the archive without checking that the app source changed, so it restored packages from older sources. <code>bitbake -c cleansstate flutter-ics-homescreen</code> fixed it.</li>
+    </ul>
+
+    <h2>3. The big one: AGL's Flutter shell has no platform views</h2>
+    <p>
+      The app shows the GPU output through an ivi-homescreen platform view (<code>libbev_view.so</code>). Its
+      Dart build hook always configures with <code>-DENABLE_IHS_PV=ON</code>, which needs the shell's
+      <code>shared/</code> platform-view API:
+    </p>
+<pre><code>CMake Error at CMakeLists.txt:257 (message):
+  ENABLE_IHS_PV: no build of ihs_shared for this target</code></pre>
+    <p>
+      AGL's manifest pins meta-flutter at <code>450ea5b3</code>, the v2 generation, which has no
+      <code>shared/</code> at all. meta-flutter's v3 generation (from <code>8af2ba88</code>, "roll to Flutter
+      3.47.1 and add ivi-homescreen v3") adds an <code>ivi-homescreen-shared</code> package, which the app's
+      CMake already finds through pkg-config. I moved to v3 with a repo local manifest, so AGL's own manifest is
+      untouched:
+    </p>
+<pre><code>&lt;!-- .repo/local_manifests/local_meta-flutter-v3.xml --&gt;
+&lt;remove-project name="meta-flutter/meta-flutter"/&gt;
+&lt;project name="meta-flutter/meta-flutter" path="external/meta-flutter" remote="github"
+         revision="5d4ba958810ba31693a461d7a5757bb6d5cc58ca" upstream="master"/&gt;</code></pre>
+    <p>That one step brought its own problems:</p>
+    <ul>
+      <li><b>License strings this bitbake rejects.</b> Several v3 recipes write <code>LICENSE = "X AND Y"</code>, which this bitbake treats as a fatal parse error (it wants <code>&amp;</code>). None of those recipes are needed, so the sample apps and test recipes are masked with <code>BBMASK</code>. A bbappend in <code>meta-agl-flutter</code> targets one of the masked samples, and a bbappend without its recipe is also fatal, so it is masked too. Two recipes the image does need, <code>libwebrtc</code> and <code>rive-text</code>, get their <code>LICENSE</code> rewritten in a local bbappend.</li>
+      <li><b>The pinned shell was too old.</b> meta-flutter <code>5d4ba958</code> pins ivi-homescreen at <code>131cbc37</code>. The platform view needs <code>4bb31fda</code> or later (a release-fence fd leak and the Vulkan backend never handing back a release fence). Upstream meta-flutter later rolled to <code>3d7a9671</code> in a commit that only changes two hashes, so I override exactly those two: <code>HOMESCREEN_COMMIT</code> and <code>PLUGINS_COMMIT</code>.</li>
+      <li><b>The compositor option on the wrong recipe.</b> Platform views are only compiled in with <code>BUILD_COMPOSITOR</code>. I first set it on <code>ivi-homescreen</code>, and by editing a file inside <code>meta-agl</code> directly, which I reverted. AGL's shell is <code>flutter-auto</code>: <code>PACKAGECONFIG:append:pn-flutter-auto = " compositor"</code>.</li>
+      <li><b>The app's Dart constraint.</b> The app asked for Dart <code>^3.11.1</code>, newer than AGL's Flutter at the time, so I lowered it to <code>^3.10.0</code>. Nothing in the app needs 3.11.</li>
+      <li><b>The home screen no longer resolved its packages.</b> With v3, <code>flutter-ics-homescreen</code> (which sets <code>PUBSPEC_IGNORE_LOCKFILE = "1"</code>) pulled <code>objective_c</code> 9.6.2, whose native assets need a newer <code>code_assets</code> than the 1.1.0 its <code>dependency_overrides</code> pin. Pinning <code>objective_c: 0.5.0</code> failed because that version doesn't exist on pub.dev. A local bbappend now adds <code>objective_c: 9.0.0</code> to its <code>dependency_overrides</code>.</li>
+    </ul>
+
+    <h2>4. Building the platform view inside Yocto</h2>
+    <ul>
+      <li><b>CMake found my host shell.</b> With <code>EXTERNALSRC</code> pointing at my checkout, CMake probed <code>../ivi-homescreen</code>, my x86 build of the shell. The recipe now fetches my local branch through git, so the build only sees the sysroot's <code>ivi-homescreen-shared</code>.</li>
+      <li><b>The Dart hook needs OE's toolchain.</b> The recipe uses meta-flutter's <code>flutter-app-native</code> class, which puts a <code>cmake</code> wrapper with OE's toolchain file on <code>PATH</code> for the hook. (AGL's <code>flutter-app-plugins</code> is an older copy that appends <code>--target-platform</code> a second time.)</li>
+      <li><b>libc++ against libstdc++.</b> <code>flutter-app-native</code> builds hooks with clang's libc++ (<code>std::__1::</code>). libcamera is built with libstdc++ (<code>Camera::id[abi:cxx11]()</code>), and its C++ API passes <code>std::string</code> and <code>std::function</code>, so the two can never link. The recipe removes <code>-stdlib=libc++ -rtlib=compiler-rt -unwindlib=libunwind</code> for itself only. The shell stays on libc++, which is fine because the view talks to it only through <code>ihs_shared</code>'s C interface.</li>
+      <li><b>A stale Flutter SDK stamp.</b> The flutter tool decided its own snapshot was stale and tried to download from pub.dev, and the network is closed in <code>do_compile</code>. Same family as the pub-cache bug. <code>bitbake -c clean flutter-surround-view</code> fixed it.</li>
+      <li><b>The library was not found at runtime.</b> Flutter records the native asset by bare name (<code>["absolute","libbev_view.so"]</code>), so the engine's <code>dlopen</code> uses the normal search path, and the file sits in <code>data/flutter_assets/native_assets/linux/</code>. The recipe installs <code>/etc/default/surround_view</code> with an <code>LD_LIBRARY_PATH</code>. AGL's app service already reads that file.</li>
+    </ul>
+
+    <h2>5. libcamera on the Pi 5</h2>
+    <p>
+      The image built, but <code>cam -l</code> found no camera. AGL's libcamera 0.6.0 (from meta-openembedded)
+      looks for the CFE media entities with hyphens (<code>rp1-cfe-fe-image0</code>), and the Pi 5 kernel 6.18
+      registers them with underscores (<code>rp1-cfe-fe_image0</code>). The Raspberry Pi fork of libcamera uses
+      underscores. Building the fork, and enabling both cameras, is an override in <code>site.conf</code>, kept
+      opt-in instead of forcing a fork on every Pi 5 build:
+    </p>
+<pre><code>SRC_URI:pn-libcamera = "git://github.com/raspberrypi/libcamera.git;protocol=https;nobranch=1;tag=v0.6.0+rpt20251202"
+SRCREV:pn-libcamera  = "f0e40f1c50bd0afe65727d6e407d0dcb42666ada"
+RASPBERRYPI_CAMERA_V2 = "1"
+RPI_EXTRA_CONFIG = "\ndtoverlay=imx219,cam0\ndtoverlay=imx219,cam1\n"</code></pre>
+    <p>Which libcamera branches I tried, and what each one does on the Pi 5, is in week 19.</p>
+
+    <h2>6. Settings the app needs to run (not build problems, but part of the change set)</h2>
+    <ul>
+      <li><b>Home screen config.</b> flutter-auto v3 reads <code>[view.shell.window] type = "BG"</code> and silently ignores v2's <code>window_type = "BG"</code>, so the home screen never became the background and the screen stayed black. A local bbappend ships the config in v3 format.</li>
+      <li><b>Apps as plain xdg windows.</b> v3 tries <code>agl-shell</code> whenever the compositor offers it, and only the home screen may bind it. A systemd drop-in runs AGL's Flutter apps with <code>--shell xdg</code>.</li>
+      <li><b>Show new windows on activation.</b> <code>activate-by-default=true</code> in the compositor's <code>weston.ini</code>, through a bbappend on <code>weston-ini-conf</code> (named without <code>_%</code>, because that recipe has no version and bitbake rejected the wildcard).</li>
+      <li><b>Free the cameras.</b> <code>wireplumber@video-capture</code> keeps every camera open. I stop it by hand; it is not in a recipe yet.</li>
+    </ul>
+
+    <h2>7. My machine</h2>
+    <p>
+      A full image build ran my PC out of memory (the OOM killer closed my editor), so <code>site.conf</code>
+      limits it to 4 bitbake threads and <code>-j 4</code>, with <code>-j1</code> for the cross-canadian gcc and
+      binutils, and inherits <code>rm_work</code>. Long builds run as their own service so a kill doesn't lose
+      the session.
+    </p>
+
+    <h2>Every change, and where it lives</h2>
+    <table class="plan-table">
+      <tr><th>Where</th><th>What</th></tr>
+      <tr><td>app repo</td><td><code>LICENSE</code> (Apache-2.0); pubspec Dart <code>^3.10.0</code>; Vulkan allocator usage flags matching the shell's importer. Pushed to GitHub: not yet, local branches only.</td></tr>
+      <tr><td>meta-agl-demo</td><td><code>recipes-demo/agl-backup-camera/agl-backup-camera_0.1.bb</code> and <code>recipes-demo/flutter-surround-view/flutter-surround-view_git.bb</code> (<code>inherit flutter-app-native agl-app</code>, <code>DEPENDS</code> with <code>ivi-homescreen-shared</code>, <code>vulkan-headers</code> and <code>opencv</code>, the libc++ flag removal, <code>/etc/default/surround_view</code>). Local branch <code>wip/flutter-v3-bringup</code>.</td></tr>
+      <tr><td>repo manifest</td><td><code>.repo/local_manifests/local_meta-flutter-v3.xml</code>: meta-flutter at <code>5d4ba958</code> (v3).</td></tr>
+      <tr><td>site.conf</td><td><code>BBMASK</code> for the v3 sample/test recipes; <code>HOMESCREEN_COMMIT</code>, <code>PLUGINS_COMMIT</code>; <code>PACKAGECONFIG:append:pn-flutter-auto = " compositor"</code>; the libcamera fork and the two camera overlays; <code>SRC_URI</code>/<code>SRCREV</code> for the app pointing at my local checkout; the OpenCV <code>PACKAGECONFIG</code> trim; build threads and <code>rm_work</code>.</td></tr>
+      <tr><td>meta-my-app</td><td>A local layer, not for Gerrit: <code>LICENSE</code> fixes for <code>libwebrtc</code> and <code>rive-text</code>; the home screen config in v3 format and the <code>objective_c</code> pin; <code>--shell xdg</code> for Flutter apps; <code>activate-by-default</code>. It is listed in <code>bblayers.conf</code>, which <code>aglsetup.sh -f</code> regenerates.</td></tr>
+      <tr><td>board only</td><td>Stopping <code>wireplumber@video-capture</code>.</td></tr>
+    </table>
+
+    <h2>Questions for my mentors before Gerrit</h2>
+    <ol>
+      <li><b>meta-flutter v3.</b> The app needs it, and AGL master pins v2. Is moving AGL to v3 planned, or should the app have a v2 path?</li>
+      <li><b>The libcamera fork.</b> Should the Raspberry Pi fork go into meta-raspberrypi or meta-agl-bsp behind a <code>MACHINE_FEATURES</code> flag, or should the naming mismatch be reported upstream first?</li>
+      <li><b>Which layer.</b> <code>meta-agl-demo</code> (where the recipes are now) or <code>meta-agl-devel</code>?</li>
+      <li><b>The v3 fixes.</b> The home screen config format, <code>--shell xdg</code> and <code>activate-by-default</code> are needed by any v3 app, not only mine. Should they go to <code>meta-agl-flutter</code> as separate changes?</li>
+      <li><b>OpenCV.</b> The calibration library (week 19) needs OpenCV from meta-oe. Is a new dependency of that size acceptable in a demo image?</li>
+    </ol>
+    <p>
+      On my side, before any review: push the app repository to GitHub, point both recipes at it with a pinned
+      <code>SRCREV</code>, add <code>RECIPE_MAINTAINER</code>, and use one name consistently for the recipe,
+      <code>PUBSPEC_APPNAME</code> and <code>AGL_APP_ID</code>.
+    </p>
+
+  </div>
+
+  <div class="next-week">
+    <p class="next-label">Next week →</p>
+    <ul class="next-list">
+      <li><span>Send this list and the questions to my mentors</span></li>
+      <li><span>Push the app repository to GitHub and point the recipes back at it with a pinned <code>SRCREV</code></span></li>
+      <li><span>Give <code>meta-my-app</code> and the meta-flutter manifest a durable home, so a regenerated build folder doesn't lose them</span></li>
+    </ul>
+  </div>
+
+  <nav class="post-nav">
+    <a class="nav-link" href="week-17.html">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="15 18 9 12 15 6"/></svg>
+      Week 17
+    </a>
+    <span class="nav-spacer"></span>
+    <a class="nav-link" href="week-19.html">
+      Week 19
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="9 18 15 12 9 6"/></svg>
+    </a>
+  </nav>
+
+  <footer>
+    <span class="footer-left">© 2026 Abdulrahman · GSoC AGL</span>
+    <div class="footer-right">
+      <a href="https://github.com/Abdulrahman-Yasser" target="_blank">GitHub</a>
+      <a href="https://www.automotivelinux.org/" target="_blank">AGL</a>
+      <a href="run-flags.html">Run flags</a>
+      <a href="index.html">Blog</a>
+    </div>
+  </footer>
+
+</div>
+</body>
+</html>

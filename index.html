@@ -418,10 +418,13 @@
 </div>
 
 <script>
-  const TOTAL_WEEKS = 17;
+  const TOTAL_WEEKS = 20;
 
   // Weeks you've published — add week numbers here as you go, e.g. [1, 2, 3]
-  const published = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 15, 16, 17];
+  const published = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 15, 16, 17, 18, 19, 20];
+
+  // Weeks that share another week's post
+  const links = { 20: "week-19.html" };
 
   // Milestone weeks (evaluation weeks)
   const milestones = { 7: "Midterm evaluation", 14: "Final evaluation" };
@@ -444,6 +447,9 @@
     15: "A Flutter Entry Point, Four Camera Boxes, and a gRPC Control Plane",
     16: "The Camera Feed Reaches the Flutter UI, and a Colour-Correction Road Test",
     17: "Live Cameras to the GPU, and Into Flutter Through ivi-homescreen",
+    18: "Building the App Inside AGL: Every Problem and Every Change",
+    19: "Calibration on Real Cameras, and Every AGL Change Proven From a Clean Tree (weeks 19-20)",
+    20: "Calibration on Real Cameras, and Every AGL Change Proven From a Clean Tree (weeks 19-20)",
   };
 
   const grid = document.getElementById("weeks-grid");
@@ -467,7 +473,7 @@
     const card = document.createElement(isDone ? "a" : "div");
     card.className = "week-card " + cls;
     if (isDone) {
-      card.href = `week-${w}.html`;
+      card.href = links[w] || `week-${w}.html`;
     }
 
     const title = isDone ? (titles[w] || "Read post →") : (isMilestone ? milestones[w] : "Coming soon");
