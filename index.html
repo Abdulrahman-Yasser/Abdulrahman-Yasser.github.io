@@ -141,6 +141,19 @@
     .hero-link:hover { border-color: var(--border2); color: var(--text); background: var(--surface2); }
     .hero-link svg { width: 14px; height: 14px; }
 
+    .report-card {
+      display: flex; align-items: center; justify-content: space-between; gap: 1rem;
+      background: var(--surface); border: 0.5px solid rgba(63,207,142,0.35);
+      border-left: 3px solid var(--green); border-radius: 10px;
+      padding: 1rem 1.25rem; margin-bottom: 2.5rem; text-decoration: none;
+      transition: background 0.15s;
+    }
+    .report-card:hover { background: var(--surface2); }
+    .report-card-label { font-family: var(--mono); font-size: 11px; color: var(--green); margin-bottom: 4px; }
+    .report-card-title { font-size: 16px; font-weight: 600; color: var(--text); }
+    .report-card-desc { font-size: 13px; color: var(--muted); margin-top: 2px; }
+    .report-card svg { width: 18px; height: 18px; color: var(--muted); flex-shrink: 0; }
+
     /* ── section label ── */
     .sec-label {
       display: flex;
@@ -321,8 +334,10 @@
       gsoc-2026 / agl / backup-camera
     </div>
     <div class="topbar-links">
+      <a href="gsoc-report.html">Report</a>
       <a href="#weeks">Weeks</a>
       <a href="#about">About</a>
+      <a href="portfolio.html">Portfolio</a>
     </div>
   </nav>
 
@@ -371,6 +386,18 @@
     </div>
   </section>
 
+  <!-- final report -->
+  <p class="sec-label" id="report">Final report</p>
+
+  <a class="report-card" href="gsoc-report.html">
+    <div>
+      <p class="report-card-label">GSoC 2026 · final work product</p>
+      <p class="report-card-title">Zero-Copy Surround View for AGL</p>
+      <p class="report-card-desc">What I built, the merged AGL changes, the current state and what's left</p>
+    </div>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="9 18 15 12 9 6"/></svg>
+  </a>
+
   <!-- weeks -->
   <p class="sec-label" id="weeks">Weekly progress</p>
 
@@ -412,6 +439,7 @@
       <a href="https://github.com/Abdulrahman-Yasser" target="_blank">GitHub</a>
       <a href="https://www.automotivelinux.org/" target="_blank">AGL</a>
       <a href="https://summerofcode.withgoogle.com/" target="_blank">GSoC</a>
+      <a href="portfolio.html">Portfolio</a>
     </div>
   </footer>
 
