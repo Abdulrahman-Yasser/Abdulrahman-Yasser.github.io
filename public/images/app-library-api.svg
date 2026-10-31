@@ -1,0 +1,73 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 820" width="1200" height="820">
+  <defs>
+    <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#8a8780"/>
+    </marker>
+    <style>
+      .t { font-family: 'IBM Plex Sans', 'DejaVu Sans', sans-serif; fill: #e8e6e0; }
+      .m { font-family: 'IBM Plex Mono', 'DejaVu Sans Mono', monospace; fill: #e8e6e0; font-size: 15px; }
+      .d { font-family: 'IBM Plex Sans', 'DejaVu Sans', sans-serif; fill: #8a8780; font-size: 13px; }
+      .h { font-size: 20px; font-weight: 600; }
+      .s { font-family: 'IBM Plex Sans', 'DejaVu Sans', sans-serif; fill: #8a8780; font-size: 14px; }
+    </style>
+  </defs>
+  <rect width="1200" height="820" fill="#0d0f10"/>
+
+  <rect x="400" y="24" width="400" height="96" rx="12" fill="#141618" stroke="#3fcf8e" stroke-width="1.5"/>
+  <text x="600" y="62" text-anchor="middle" class="t h">Surround View app</text>
+  <text x="600" y="90" text-anchor="middle" class="s">Flutter UI: views, toolbar, settings</text>
+
+  <path d="M520 120 C 520 160, 300 150, 300 190" fill="none" stroke="#8a8780" stroke-width="1.6" marker-end="url(#arr)"/>
+  <path d="M680 120 C 680 160, 900 150, 900 190" fill="none" stroke="#8a8780" stroke-width="1.6" marker-end="url(#arr)"/>
+
+  <rect x="24" y="192" width="552" height="456" rx="12" fill="#141618" stroke="#5b9cf6" stroke-width="1.5"/>
+  <text x="48" y="230" class="t h">bev_view</text>
+  <text x="48" y="254" class="s">camera to GPU to Flutter</text>
+
+  <text x="48" y="300" class="m">BevView(source, onCreated)</text>
+  <text x="48" y="322" class="d">the widget that shows a camera or the bird's-eye view</text>
+
+  <text x="48" y="366" class="m">BevCameraSource(cameraId, fps, width, height)</text>
+  <text x="48" y="388" class="d">one camera, live, as it sees the scene</text>
+
+  <text x="48" y="432" class="m">BevSurroundSource(sources, undistort,</text>
+  <text x="48" y="452" class="m">  config, lensDir, pxPerMeter, fps)</text>
+  <text x="48" y="474" class="d">bird's-eye view of one or all cameras; with undistort,</text>
+  <text x="48" y="492" class="d">one camera with its fisheye removed (flat 2D picture)</text>
+
+  <text x="48" y="536" class="m">BevViewController.stats() → BevStats</text>
+  <text x="48" y="558" class="d">frame rate and pipeline counters for the overlay</text>
+
+  <rect x="624" y="192" width="552" height="456" rx="12" fill="#141618" stroke="#f5a623" stroke-width="1.5"/>
+  <text x="648" y="230" class="t h">bev_calib</text>
+  <text x="648" y="254" class="s">lens and surround calibration</text>
+
+  <text x="648" y="300" class="m">CalibPaths.fromEnvironment()</text>
+  <text x="648" y="322" class="d">where the config, lens files and board layouts live</text>
+
+  <text x="648" y="366" class="m">PositionState.read(configPath)</text>
+  <text x="648" y="388" class="d">which camera is mounted where, and is it calibrated</text>
+
+  <text x="648" y="432" class="m">CameraPosition (front, back, left, right, ...)</text>
+  <text x="648" y="454" class="d">the mount points around the car</text>
+
+  <text x="648" y="498" class="m">LensFile.list(lensDir)</text>
+  <text x="648" y="520" class="d">the measured lenses, and whether each is a fisheye</text>
+
+  <text x="648" y="564" class="m">CamerasPage, LensCalibrationPage,</text>
+  <text x="648" y="584" class="m">SurroundCalibrationPage</text>
+  <text x="648" y="606" class="d">the calibration screens, opened from Settings</text>
+
+  <path d="M300 648 L300 688" fill="none" stroke="#8a8780" stroke-width="1.6" marker-end="url(#arr)"/>
+  <path d="M900 648 L900 688" fill="none" stroke="#8a8780" stroke-width="1.6" marker-end="url(#arr)"/>
+
+  <rect x="24" y="690" width="552" height="106" rx="12" fill="#1c1f21" stroke="rgba(255,255,255,0.14)" stroke-width="1"/>
+  <text x="48" y="724" class="m">libbev_view.so</text>
+  <text x="48" y="752" class="d">libcamera · dma-buf · EGL · OpenGL ES shaders</text>
+  <text x="48" y="774" class="d">ivi-homescreen platform views · C++ · Dart FFI</text>
+
+  <rect x="624" y="690" width="552" height="106" rx="12" fill="#1c1f21" stroke="rgba(255,255,255,0.14)" stroke-width="1"/>
+  <text x="648" y="724" class="m">libbev_calib.so</text>
+  <text x="648" y="752" class="d">OpenCV (ChArUco, calib3d) · libcamera stills</text>
+  <text x="648" y="774" class="d">C++ · Dart FFI</text>
+</svg>

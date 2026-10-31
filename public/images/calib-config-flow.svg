@@ -1,0 +1,71 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 640" width="1200" height="640">
+  <defs>
+    <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#8a8780"/>
+    </marker>
+    <style>
+      .t { font-family: 'IBM Plex Sans', 'DejaVu Sans', sans-serif; fill: #e8e6e0; }
+      .h { font-size: 20px; font-weight: 600; }
+      .s { font-family: 'IBM Plex Sans', 'DejaVu Sans', sans-serif; fill: #8a8780; font-size: 14px; }
+      .m { font-family: 'IBM Plex Mono', 'DejaVu Sans Mono', monospace; fill: #e8e6e0; font-size: 14px; }
+      .k { font-family: 'IBM Plex Mono', 'DejaVu Sans Mono', monospace; fill: #8a8780; font-size: 13px; }
+      .a { font-family: 'IBM Plex Sans', 'DejaVu Sans', sans-serif; fill: #8a8780; font-size: 13px; font-style: italic; }
+    </style>
+  </defs>
+  <rect width="1200" height="640" fill="#0d0f10"/>
+
+  <rect x="24" y="40" width="330" height="330" rx="12" fill="#141618" stroke="#f5a623" stroke-width="1.5"/>
+  <text x="48" y="78" class="t h">bev_calib</text>
+  <text x="48" y="102" class="s">Settings, run once per setup</text>
+  <text x="48" y="146" class="m">Camera positions</text>
+  <text x="48" y="166" class="s">which camera is where on the car</text>
+  <text x="48" y="208" class="m">Lens calibration</text>
+  <text x="48" y="228" class="s">one board, many poses, OpenCV</text>
+  <text x="48" y="248" class="s">fits the lens and its distortion</text>
+  <text x="48" y="290" class="m">Surround calibration</text>
+  <text x="48" y="310" class="s">boards around the car, OpenCV</text>
+  <text x="48" y="330" class="s">finds each camera's ground homography</text>
+
+  <path d="M354 150 L 438 150" fill="none" stroke="#8a8780" stroke-width="1.6" marker-end="url(#arr)"/>
+  <text x="396" y="140" text-anchor="middle" class="a">writes</text>
+  <path d="M354 300 L 438 420" fill="none" stroke="#8a8780" stroke-width="1.6" marker-end="url(#arr)"/>
+  <text x="380" y="380" text-anchor="middle" class="a">writes</text>
+
+  <rect x="440" y="40" width="330" height="300" rx="12" fill="#1c1f21" stroke="rgba(255,255,255,0.18)" stroke-width="1"/>
+  <text x="464" y="78" class="m" font-weight="600">bev_config.ini</text>
+  <text x="464" y="112" class="k">px_per_m, overlap_deg, blend_edge</text>
+  <text x="464" y="140" class="k">[front] [back] [left] [right] ...</text>
+  <text x="480" y="166" class="k">camera = &lt;libcamera id&gt;</text>
+  <text x="480" y="190" class="k">cam_x, cam_y, cam_h,</text>
+  <text x="480" y="210" class="k">pitch, yaw, facing</text>
+  <text x="480" y="234" class="k">hb2i = ground to image</text>
+  <text x="480" y="254" class="k">       homography</text>
+  <text x="480" y="278" class="k">view = visible area</text>
+  <text x="480" y="302" class="k">lens_model = &lt;lens&gt;</text>
+
+  <rect x="440" y="380" width="330" height="190" rx="12" fill="#1c1f21" stroke="rgba(255,255,255,0.18)" stroke-width="1"/>
+  <text x="464" y="418" class="m" font-weight="600">&lt;lens&gt;-lens.ini</text>
+  <text x="464" y="448" class="k">model = pinhole | fisheye</text>
+  <text x="464" y="472" class="k">fx, fy, cx, cy</text>
+  <text x="464" y="496" class="k">k1, k2, k3, (k4 | p1, p2)</text>
+  <text x="464" y="530" class="s">one file per measured lens</text>
+  <path d="M605 340 L 605 378" fill="none" stroke="#8a8780" stroke-width="1.4" stroke-dasharray="4 4" marker-end="url(#arr)"/>
+  <text x="615" y="364" class="a">lens_model points here</text>
+
+  <path d="M770 190 L 846 250" fill="none" stroke="#8a8780" stroke-width="1.6" marker-end="url(#arr)"/>
+  <path d="M770 470 L 846 360" fill="none" stroke="#8a8780" stroke-width="1.6" marker-end="url(#arr)"/>
+  <text x="808" y="200" text-anchor="middle" class="a">reads</text>
+  <text x="826" y="470" text-anchor="middle" class="a">reads</text>
+
+  <rect x="848" y="160" width="328" height="290" rx="12" fill="#141618" stroke="#5b9cf6" stroke-width="1.5"/>
+  <text x="872" y="198" class="t h">bev_view</text>
+  <text x="872" y="222" class="s">every time a view is created</text>
+  <text x="872" y="264" class="m">GPU shader, every frame</text>
+  <text x="872" y="292" class="s">1. remove the lens distortion</text>
+  <text x="872" y="318" class="s">2. project each camera onto the</text>
+  <text x="872" y="338" class="s">    ground with its homography</text>
+  <text x="872" y="364" class="s">3. blend neighbours at the seams</text>
+  <text x="872" y="400" class="t" font-size="16" font-weight="600">= bird's-eye view</text>
+
+  <text x="600" y="616" text-anchor="middle" class="s">after a calibration the app reopens its views, which read the new files: no restart</text>
+</svg>

@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Final Report · GSoC 2026 · AGL Backup Camera</title>
+  <meta name="description" content="GSoC 2026 final report: zero-copy multi-camera surround view for AGL." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg:        #0d0f10;
+      --surface:   #141618;
+      --surface2:  #1c1f21;
+      --border:    rgba(255,255,255,0.08);
+      --border2:   rgba(255,255,255,0.14);
+      --text:      #e8e6e0;
+      --muted:     #8a8780;
+      --hint:      #4a4845;
+      --green:     #3fcf8e;
+      --green-dim: rgba(63,207,142,0.12);
+      --amber:     #f5a623;
+      --blue:      #5b9cf6;
+      --blue-dim:  rgba(91,156,246,0.1);
+      --red:       #f87171;
+      --mono: 'IBM Plex Mono', monospace;
+      --sans: 'IBM Plex Sans', sans-serif;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--sans);
+      font-size: 15px;
+      line-height: 1.75;
+      min-height: 100vh;
+    }
+
+    .site { max-width: 720px; margin: 0 auto; padding: 3rem 1.5rem 5rem; }
+
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 3rem;
+      padding-bottom: 1.25rem;
+      border-bottom: 0.5px solid var(--border);
+      flex-wrap: wrap;
+      gap: 0.75rem;
+    }
+    .back-link {
+      display: inline-flex; align-items: center; gap: 6px;
+      font-family: var(--mono); font-size: 12px;
+      color: var(--muted); text-decoration: none;
+      transition: color 0.15s;
+    }
+    .back-link:hover { color: var(--text); }
+    .back-link svg { width: 14px; height: 14px; }
+    .topbar-links { display: flex; gap: 14px; align-items: center; }
+    .topbar-links a {
+      display: inline-flex; align-items: center; gap: 6px;
+      font-family: var(--mono); font-size: 12px;
+      color: var(--muted); text-decoration: none; transition: color 0.15s;
+    }
+    .topbar-links a:hover { color: var(--text); }
+    .topbar-links svg { width: 15px; height: 15px; }
+    .topbar-brand { font-family: var(--mono); font-size: 12px; color: var(--hint); }
+
+    .post-header { margin-bottom: 2.5rem; }
+    .post-eyebrow {
+      display: inline-flex; align-items: center; gap: 8px;
+      font-family: var(--mono); font-size: 11px;
+      color: var(--green);
+      border: 0.5px solid rgba(63,207,142,0.3);
+      background: var(--green-dim);
+      border-radius: 4px; padding: 4px 10px; margin-bottom: 1rem;
+    }
+    h1 {
+      font-family: var(--sans); font-size: clamp(22px, 4vw, 32px);
+      font-weight: 600; color: var(--text); line-height: 1.25; margin-bottom: 0.75rem;
+    }
+    .post-meta {
+      display: flex; flex-wrap: wrap; gap: 1.25rem;
+      font-family: var(--mono); font-size: 12px; color: var(--muted);
+    }
+
+    .sec-label {
+      display: flex; align-items: center; gap: 10px;
+      font-family: var(--mono); font-size: 11px; color: var(--hint);
+      letter-spacing: 0.1em; text-transform: uppercase;
+      margin: 2rem 0 1rem;
+    }
+    .sec-label::after { content: ''; flex: 1; height: 0.5px; background: var(--border); }
+
+    .achievement-list { list-style: none; display: flex; flex-direction: column; gap: 10px; margin-bottom: 1.5rem; }
+    .achievement-list li {
+      display: flex; align-items: flex-start; gap: 10px;
+      font-size: 14px; color: var(--text); line-height: 1.55;
+    }
+    .ach-icon { width: 16px; height: 16px; color: var(--green); flex-shrink: 0; margin-top: 3px; }
+
+    .prose { font-size: 15px; color: var(--text); line-height: 1.8; }
+    .prose p { margin-bottom: 1.1rem; }
+    .prose h2 {
+      font-family: var(--sans); font-size: 18px; font-weight: 500;
+      color: var(--text); margin: 2rem 0 0.75rem;
+    }
+    .prose h3 {
+      font-family: var(--sans); font-size: 15px; font-weight: 500;
+      color: var(--muted); margin: 1.5rem 0 0.5rem;
+    }
+    .prose code {
+      font-family: var(--mono); font-size: 13px;
+      background: var(--surface2); border: 0.5px solid var(--border2);
+      border-radius: 4px; padding: 2px 6px; color: var(--green);
+    }
+    .prose pre {
+      background: var(--surface); border: 0.5px solid var(--border2);
+      border-radius: 8px; padding: 1.25rem; overflow-x: auto;
+      font-family: var(--mono); font-size: 13px; color: var(--text);
+      margin: 1rem 0 1.5rem; line-height: 1.6;
+    }
+    .prose pre code { background: none; border: none; padding: 0; color: inherit; font-size: inherit; }
+    .prose a { color: var(--blue); text-decoration: none; }
+    .prose a:hover { text-decoration: underline; }
+    .prose ul, .prose ol { padding-left: 1.4rem; margin-bottom: 1rem; }
+    .prose li { margin-bottom: 0.35rem; }
+    .prose blockquote {
+      border-left: 3px solid var(--border2); padding-left: 1rem;
+      color: var(--muted); font-style: italic; margin: 1rem 0;
+    }
+    .prose figure { margin: 1.25rem 0 1.5rem; }
+    .prose figure img,
+    .prose figure video { width: 100%; border-radius: 8px; border: 0.5px solid var(--border2); display: block; }
+    .prose figure figcaption { font-family: var(--mono); font-size: 11px; color: var(--muted); margin-top: 6px; text-align: center; }
+    .media-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin: 1.25rem 0 1.5rem; align-items: start; }
+    .media-row figure { margin: 0; }
+    @media (max-width: 620px) { .media-row { grid-template-columns: 1fr; } }
+
+    .video-note {
+      background: var(--surface); border: 0.5px solid var(--border);
+      border-radius: 10px; margin: 1.25rem 0 1.5rem; overflow: hidden;
+    }
+    .video-note summary {
+      display: flex; align-items: center; gap: 8px;
+      padding: 0.85rem 1.1rem; cursor: pointer; user-select: none;
+      font-family: var(--mono); font-size: 13px; color: var(--text);
+      list-style: none;
+    }
+    .video-note summary::-webkit-details-marker { display: none; }
+    .video-note summary:hover { color: var(--green); }
+    .video-note-arrow { width: 14px; height: 14px; color: var(--muted); flex-shrink: 0; transition: transform 0.2s ease, color 0.2s ease; }
+    .video-note[open] .video-note-arrow { transform: rotate(90deg); color: var(--green); }
+    .video-note video {
+      display: block; width: 100%;
+      border-top: 0.5px solid var(--border);
+    }
+
+    .cards-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 1.5rem; }
+    @media (max-width: 540px) { .cards-row { grid-template-columns: 1fr; } }
+    .mini-card {
+      background: var(--surface); border: 0.5px solid var(--border);
+      border-radius: 10px; padding: 1rem;
+    }
+    .mini-card-label {
+      font-family: var(--mono); font-size: 10px; color: var(--hint);
+      letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 8px;
+    }
+    .mini-card-body { font-size: 13px; color: var(--text); line-height: 1.5; }
+
+    .plan-table {
+      width: 100%; border-collapse: collapse; margin: 1rem 0 1.5rem;
+      font-size: 13px;
+    }
+    .plan-table th {
+      font-family: var(--mono); font-size: 10px; color: var(--hint);
+      letter-spacing: 0.08em; text-transform: uppercase;
+      text-align: left; padding: 0 0.75rem 0.6rem;
+      border-bottom: 0.5px solid var(--border2);
+    }
+    .plan-table td {
+      padding: 0.55rem 0.75rem;
+      border-bottom: 0.5px solid var(--border);
+      color: var(--text); vertical-align: top; line-height: 1.5;
+    }
+    .plan-table tr:last-child td { border-bottom: none; }
+    .plan-table td:first-child {
+      font-family: var(--mono); font-size: 12px;
+      color: var(--muted); white-space: nowrap;
+    }
+    .plan-table td.mono { font-family: var(--mono); font-size: 12px; }
+
+    .next-week {
+      background: var(--surface); border: 0.5px solid var(--border);
+      border-left: 3px solid var(--amber); border-radius: 10px;
+      padding: 1rem 1.25rem; margin-top: 2rem;
+    }
+    .next-label { font-family: var(--mono); font-size: 11px; color: var(--amber); margin-bottom: 8px; }
+    .next-text { font-size: 14px; color: var(--text); }
+    .next-week code { white-space: nowrap; }
+    .next-list { list-style: none; display: flex; flex-direction: column; gap: 6px; margin-top: 8px; }
+    .next-list li { display: flex; align-items: flex-start; gap: 8px; font-size: 14px; color: var(--text); }
+    .next-list li::before { content: '→'; color: var(--amber); font-family: var(--mono); font-size: 12px; margin-top: 2px; flex-shrink: 0; }
+
+    .post-nav {
+      display: flex; justify-content: space-between; align-items: center;
+      margin-top: 3rem; padding-top: 1.5rem;
+      border-top: 0.5px solid var(--border);
+      flex-wrap: wrap; gap: 1rem;
+    }
+    .nav-link {
+      display: inline-flex; align-items: center; gap: 6px;
+      font-family: var(--mono); font-size: 12px;
+      color: var(--muted); text-decoration: none;
+      transition: color 0.15s;
+    }
+    .nav-link:hover { color: var(--text); }
+    .nav-link svg { width: 14px; height: 14px; }
+    .nav-spacer { flex: 1; }
+
+    footer {
+      border-top: 0.5px solid var(--border);
+      padding-top: 1.5rem; margin-top: 2rem;
+      display: flex; justify-content: space-between; align-items: center;
+      flex-wrap: wrap; gap: 0.75rem;
+    }
+    .footer-left { font-family: var(--mono); font-size: 12px; color: var(--hint); }
+    .footer-right { display: flex; gap: 14px; }
+    .footer-right a {
+      color: var(--hint); text-decoration: none;
+      font-size: 12px; font-family: var(--mono); transition: color 0.15s;
+    }
+    .footer-right a:hover { color: var(--muted); }
+  </style>
+</head>
+<body>
+<div class="site">
+
+  <nav class="topbar">
+    <a class="back-link" href="index.html">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="15 18 9 12 15 6"/></svg>
+      Back to blog
+    </a>
+    <div class="topbar-links">
+      <a href="https://www.linkedin.com/in/abdulrahman--yasser/" target="_blank" aria-label="LinkedIn">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M4.98 3.5a2.5 2.5 0 1 1 0 5 2.5 2.5 0 0 1 0-5zM3 9h4v12H3zM9 9h3.8v1.7h.1c.5-1 1.8-2 3.8-2 4 0 4.8 2.6 4.8 6V21h-4v-5.6c0-1.3 0-3-1.9-3s-2.1 1.4-2.1 2.9V21H9z"/></svg>
+        LinkedIn
+      </a>
+      <a href="https://github.com/Abdulrahman-Yasser" target="_blank" aria-label="GitHub">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 .5a11.5 11.5 0 0 0-3.6 22.4c.6.1.8-.3.8-.6v-2c-3.2.7-3.9-1.5-3.9-1.5-.5-1.3-1.3-1.7-1.3-1.7-1-.7.1-.7.1-.7 1.2.1 1.8 1.2 1.8 1.2 1 1.8 2.8 1.3 3.5 1 .1-.8.4-1.3.7-1.6-2.6-.3-5.3-1.3-5.3-5.7 0-1.3.5-2.3 1.2-3.1-.1-.3-.5-1.5.1-3.1 0 0 1-.3 3.3 1.2a11.4 11.4 0 0 1 6 0C17.7 4.8 18.7 5.1 18.7 5.1c.6 1.6.2 2.8.1 3.1.8.8 1.2 1.8 1.2 3.1 0 4.4-2.7 5.4-5.3 5.7.4.4.8 1.1.8 2.2v3.3c0 .3.2.7.8.6A11.5 11.5 0 0 0 12 .5z"/></svg>
+        GitHub
+      </a>
+      <a href="mailto:abdu.ya74@gmail.com" aria-label="Email">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="5" width="18" height="14" rx="2"/><polyline points="3 7 12 13 21 7"/></svg>
+        Email
+      </a>
+    </div>
+  </nav>
+
+  <header class="post-header">
+    <div class="post-eyebrow">Final Report · GSoC 2026 · AGL</div>
+    <h1>Zero-Copy Surround View for AGL</h1>
+    <div class="post-meta">
+      <span>By week details</span>
+      <span>Abdulrahman</span>
+    </div>
+  </header>
+
+  <div class="prose">
+
+    <h2>Project summary</h2>
+    <p>
+      My GSoC 2026 project with Automotive Grade Linux was an AI-enabled backup camera. I built its foundation, a
+      zero-copy camera pipeline from libcamera to the GPU, and on top of it Surround View: a Flutter application for
+      AGL that shows the car's cameras live and stitches them into one top-down bird's-eye view.
+    </p>
+
+    <h2>What I built</h2>
+    <figure>
+      <a href="public/images/app-library-api.png" target="_blank"><img src="public/images/app-library-api.svg" alt="The functions the Surround View app uses from bev_view and bev_calib" /></a>
+      <figcaption>What the app uses from each library, and what each library is built on (click to enlarge)</figcaption>
+    </figure>
+    <h3>The Surround View app</h3>
+    <p>
+      The user interface. A toolbar switches between the views, each one a live <code>BevView</code> widget:
+    </p>
+    <ul>
+      <li><strong>360 degree:</strong> the bird's-eye view, every mounted camera stitched into one top-down image of the car's surroundings</li>
+      <li><strong>One view per camera</strong> (front, back, sides): each camera on its own, shown as it sees the scene, as a flat 2D picture with the fisheye removed, or from above</li>
+      <li><strong>Side views</strong> and <strong>Rear/Front cameras:</strong> two cameras next to each other</li>
+    </ul>
+    <p>
+      From <strong>Settings</strong> the user assigns each camera to its position on the car and starts the lens
+      calibration or the surround calibration. A guide overlay and a distance grid are one tap away in every view.
+    </p>
+    <p>
+      It runs on a Raspberry Pi 5 with any camera libcamera supports. I developed it with two IMX219 CSI cameras, and
+      USB (UVC) cameras work as well.
+    </p>
+    <h3>bev_view: camera to GPU to Flutter</h3>
+    <p>
+      A Flutter plugin with a native library that takes a camera all the way to the screen. Frames from libcamera go
+      to the GPU as dma-bufs, with no copy on the CPU, a shader renders them, and the result reaches the Flutter UI
+      as an ivi-homescreen platform view (ivi-homescreen is the program that runs Flutter apps on AGL, and a platform
+      view lets native GPU content sit inside a Flutter screen). An app only places a <code>BevView</code> widget and
+      picks what it shows:
+    </p>
+    <ul>
+      <li>One camera, live, as it sees the scene</li>
+      <li>One camera with its fisheye distortion removed, giving a flat 2D picture</li>
+      <li>One camera projected onto the ground, from above</li>
+      <li>Every mounted camera projected onto the ground and blended into one bird's-eye view, each frame</li>
+    </ul>
+    <p>
+      Each view is configured when it is created: which cameras it shows, by libcamera id or by mount position from
+      the calibration config, and the camera resolution, frame rate and bird's-eye zoom, which the app reads from
+      <code>BEV_*</code> environment variables. A <code>BevViewController</code> reports live statistics such as the
+      frame rate, which the app shows as an overlay with <code>BEV_STAT=1</code>.
+    </p>
+
+    <h3>bev_calib: lens and surround calibration</h3>
+    <p>
+      The lens and surround calibration the bird's-eye view needs is done inside the app with ChArUco boards and
+      OpenCV, once, and saved for the GPU to use.
+    </p>
+    <p>
+      Everything the calibration and the Settings page produce is saved to ini files: <code>bev_config.ini</code>
+      holds which camera is mounted at each position, each camera's pose and ground homography, and the
+      bird's-eye view's zoom and seam settings, and one <code>&lt;lens&gt;-lens.ini</code> file per measured lens
+      holds its distortion model. The app reads these files whenever a view is created, so when the user leaves
+      Settings or finishes a calibration, the views reopen with the new configuration, without restarting the app.
+    </p>
+    <figure>
+      <a href="public/images/calib-config-flow.png" target="_blank"><img src="public/images/calib-config-flow.svg" alt="bev_calib writes bev_config.ini and the lens files, bev_view reads them to build the bird's-eye view" /></a>
+      <figcaption>bev_calib writes the ini files, bev_view reads them to build the bird's-eye view (click to enlarge)</figcaption>
+    </figure>
+    <p>
+      The lens calibration measures one camera at a time: the user holds a ChArUco board in front of it in many
+      poses, picks a pinhole or fisheye model, and OpenCV fits the lens and its distortion. The surround calibration
+      places every camera on the car: boards are laid on the ground around the car following a board layout, each
+      camera finds the boards it sees, and their known positions give that camera's homography from the ground to
+      its image. Where two cameras see the same board, the app also measures how well their seam lines up.
+    </p>
+
+    <h2>Code</h2>
+    <h3>Application repository</h3>
+    <ul>
+      <li><a href="https://github.com/Abdulrahman-Yasser/flutter-surround-view">github.com/Abdulrahman-Yasser/flutter-surround-view</a>:
+        the app, <code>bev_view</code> and <code>bev_calib</code>, with the full history</li>
+      <li><code>apps/flutter-surround-view</code> on AGL Gerrit: created for the app, the history import is in progress</li>
+    </ul>
+
+    <h3>AGL Gerrit changes</h3>
+    <table class="plan-table">
+      <tr><th>Change</th><th>Repo</th><th>What it does</th><th>Status</th></tr>
+      <tr><td><a href="https://gerrit.automotivelinux.org/gerrit/c/AGL/meta-agl-demo/+/32099">32099</a></td><td class="mono">meta-agl-demo</td><td>Adds the <code>flutter-surround-view</code> recipe and puts the app in the Flutter demo image on Raspberry Pi 5</td><td>merged</td></tr>
+      <tr><td><a href="https://gerrit.automotivelinux.org/gerrit/c/AGL/meta-agl/+/32100">32100</a></td><td class="mono">meta-agl</td><td>Builds flutter-auto with the <code>compositor</code> option on Raspberry Pi 5, which platform views need</td><td>merged</td></tr>
+      <tr><td><a href="https://gerrit.automotivelinux.org/gerrit/c/AGL/meta-agl/+/32102">32102</a></td><td class="mono">meta-agl</td><td>Uses the Raspberry Pi libcamera fork on Raspberry Pi 5, which supports its camera pipeline</td><td>merged</td></tr>
+    </table>
+
+    <h3>Documentation</h3>
+    <ul>
+      <li>A Surround View page written for <a href="https://docs.automotivelinux.org">docs.automotivelinux.org</a>:
+        supported hardware, building, using the app, calibration and debugging</li>
+      <li>This blog: one post per week, with every problem and change along the way</li>
+    </ul>
+
+    <h2>Current state</h2>
+    <p>
+      Surround View is part of AGL: the recipe and the two platform changes it needs are merged, so the AGL Flutter
+      demo image for Raspberry Pi 5 builds and ships the app. On the Pi it shows each camera live, flat or from
+      above, stitches the mounted cameras into the 360 degree view, and runs both calibrations inside the app, with
+      the frames going from libcamera to the screen without a copy on the CPU.
+    </p>
+
+
+    <h2>What's left</h2>
+    <ul>
+      <li><strong>Next step: the AI.</strong> Run the existing camera AI model inside the app, on the same zero-copy
+        frames, and show its detections in the views. </li>
+      <li>Move the app's history to <code>apps/flutter-surround-view</code> on AGL Gerrit and point the recipe at it</li>
+    </ul>
+
+    <h2>Challenges and lessons</h2>
+    <ul>
+      <li><strong>Working with the GPU.</strong> For the first time, I had to write shader programs, set up vertex
+        attributes, and turn an algorithm into something the GPU computes for every pixel.</li>
+      <li><strong>Zero-copy frames from the camera to Flutter.</strong> When I applied, my first impression was that
+        I would use OpenCV and be done: two functions from the library and that's it! After the first meeting I was
+        hit by a wall of terms I had never heard of. "Zero-copy" alone, once I looked it up, ended my hopes of doing
+        everything with OpenCV, and behind it came dma-buf, DRM, KMS, EGL and more that I didn't even catch at first.</li>
+      <li><strong>Getting headless frames into a window.</strong> Besides learning what GBM, EGL, NV12 and FBOs are,
+        I had to actually see my shader's output somewhere. That needed a real window on the AGL compositor, so I had
+        to learn a display model very different from the desktop one in my head: Wayland is the protocol, and the
+        compositor is the server that owns the screen and places every client's surfaces. Just understanding that
+        took a lot of effort.</li>
+      <li><strong>The display system is more complex than it looks.</strong> I had never cared where or how my
+        application gets drawn. I would write a Qt app, run it, and see the buttons, widgets and labels, while the
+        hidden C++ code had all the fun. Learning how all of that actually interacts with the OS was a huge addition
+        for me.</li>
+
+      <li><strong>Getting GPU frames into a Flutter screen.</strong> Flutter draws its own UI, so showing native GPU
+        output inside it needs a platform view, and in AGL's Flutter shell platform views only exist when it is built
+        with the compositor option. Until I found that, the app started fine but every camera view failed
+        (<code>register_factory('views/bev-view') failed: -4</code>). I learned how the shell composites Flutter's
+        layers and the platform views between them. The code that carries my shader's output into Flutter was
+        written by Joel Winarske: the ivi-homescreen platform view, which renders into a ring of dma-buf buffers and
+        hands each frame to the shell with fences on both the EGL and the Vulkan backend, and the
+        <code>bev_view</code></li>
+      <li><strong>Native code inside a Flutter build.</strong> The C++ libraries are built by the Flutter packages'
+        native-assets build hooks, and inside Yocto that hit an ABI clash: the hooks compile with clang's libc++,
+        while libcamera is built with libstdc++, and its C++ API passes <code>std::string</code> across the boundary.
+        The recipe builds them with libstdc++ instead, the same as libcamera.</li>
+    </ul>
+
+    <h2>Weekly blog</h2>
+    <ul>
+      <li><a href="index.html">All weekly posts</a></li>
+      <li><a href="week-3.html">Week 3</a>: dma-buf into the GPU, the first colour frame</li>
+      <li><a href="week-7.html">Week 7</a>: the ground-plane homography behind the bird's-eye view</li>
+      <li><a href="week-9.html">Week 9</a>: from checkerboard to ChArUco</li>
+      <li><a href="week-17.html">Week 17</a>: live cameras into Flutter through ivi-homescreen</li>
+      <li><a href="week-18.html">Week 18</a>: building the app inside AGL</li>
+      <li><a href="week-22.html">Week 22</a>: down to three changes on a clean master</li>
+    </ul>
+
+    
+    <h2>Acknowledgements</h2>
+    <p>
+      Nothing I write here will be enough, really. I never thought people would spend their own time just so someone
+      else could benefit (capitalism, and life is short), but what I have seen over these months changed how I see
+      things.
+    </p>
+    <p>
+      I could never have done any of this without this amazing community. The time my mentors spent explaining what
+      to do, how to do it, and why it should be done that way was incredible. The explanations they gave me whenever
+      I was lost in the architecture, the patience when I spent longer than I should have on a task, and so much
+      more: I can't thank them enough.
+    </p>
+    <p>
+      So, thanks a lot. Once I have a car, AGL will be my first choice (it would be cool to drive a motor through its
+      CAN support and make my car like Batman's), and Surround View will be running there for sure, hopefully with
+      longer CSI cables.
+    </p>
+
+  </div>
+
+  <footer>
+    <span class="footer-left">© 2026 Abdulrahman · GSoC AGL</span>
+    <div class="footer-right">
+      <a href="https://github.com/Abdulrahman-Yasser" target="_blank">GitHub</a>
+      <a href="https://www.automotivelinux.org/" target="_blank">AGL</a>
+      <a href="run-flags.html">Run flags</a>
+      <a href="index.html">Blog</a>
+    </div>
+  </footer>
+
+</div>
+</body>
+</html>
