@@ -135,6 +135,26 @@
     .prose figure img,
     .prose figure video { width: 100%; border-radius: 8px; border: 0.5px solid var(--border2); display: block; }
     .prose figure figcaption { font-family: var(--mono); font-size: 11px; color: var(--muted); margin-top: 6px; text-align: center; }
+    .carousel { position: relative; margin: 1.25rem 0 1.5rem; }
+    .carousel-track {
+      display: flex; gap: 12px; overflow-x: auto; scroll-snap-type: x mandatory;
+      scroll-behavior: smooth; scrollbar-width: none; padding-bottom: 2px;
+    }
+    .carousel-track::-webkit-scrollbar { display: none; }
+    .carousel-track figure { flex: 0 0 auto; margin: 0; scroll-snap-align: start; }
+    .prose .carousel-track figure img { height: 300px; width: auto; max-width: none; }
+    .carousel-track figcaption { max-width: 360px; }
+    .carousel-btn {
+      position: absolute; top: 150px; transform: translateY(-50%);
+      width: 36px; height: 36px; border-radius: 50%;
+      border: 0.5px solid var(--border2); background: rgba(20,22,24,0.85); color: var(--text);
+      display: flex; align-items: center; justify-content: center; cursor: pointer;
+    }
+    .carousel-btn:hover { background: var(--surface2); }
+    .carousel-btn svg { width: 16px; height: 16px; }
+    .carousel-btn.prev { left: 6px; }
+    .carousel-btn.next { right: 6px; }
+    @media (max-width: 620px) { .prose .carousel-track figure img { height: 220px; } .carousel-btn { top: 110px; } }
     .media-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin: 1.25rem 0 1.5rem; align-items: start; }
     .media-row figure { margin: 0; }
     @media (max-width: 620px) { .media-row { grid-template-columns: 1fr; } }
@@ -266,13 +286,15 @@
   <header class="post-header">
     <div class="post-eyebrow">Final Report · GSoC 2026 · AGL</div>
     <h1>Zero-Copy Surround View for AGL</h1>
-    <div class="post-meta">
-      <span>By week details</span>
-      <span>Abdulrahman</span>
-    </div>
   </header>
 
   <div class="prose">
+
+    <figure>
+      <video src="public/videos/surround-view-part1.mp4" controls muted playsinline preload="metadata"
+             style="max-height: 640px; width: auto; max-width: 100%; margin: 0 auto;"></video>
+      <figcaption>Surround View on a Raspberry Pi 5 running AGL: surround calibration on the street, then the bird's-eye view (4x speed)</figcaption>
+    </figure>
 
     <h2>Project summary</h2>
     <p>
@@ -303,6 +325,20 @@
       It runs on a Raspberry Pi 5 with any camera libcamera supports. I developed it with two IMX219 CSI cameras, and
       USB (UVC) cameras work as well.
     </p>
+    <div class="carousel">
+      <div class="carousel-track">
+        <figure><a href="public/images/setup-trunk.jpg" target="_blank"><img src="public/images/setup-trunk.jpg" alt="The test rig in a car's trunk: Raspberry Pi 5, two cameras, a display and a power bank" /></a>
+          <figcaption>The test rig in the car: Pi 5, cameras, display, power bank</figcaption></figure>
+        <figure><a href="public/images/setup-board.jpg" target="_blank"><img src="public/images/setup-board.jpg" alt="A ChArUco board on the ground behind the car" /></a>
+          <figcaption>A ChArUco board behind the car, for the surround calibration</figcaption></figure>
+        <figure><a href="public/images/setup-pi.jpg" target="_blank"><img src="public/images/setup-pi.jpg" alt="The Raspberry Pi 5 with a camera on its mount" /></a>
+          <figcaption>The Raspberry Pi 5 with a camera on its mount</figcaption></figure>
+        <figure><a href="public/images/setup-fisheye.jpg" target="_blank"><img src="public/images/setup-fisheye.jpg" alt="A fisheye camera module seen from above" /></a>
+          <figcaption>A fisheye camera module</figcaption></figure>
+      </div>
+      <button class="carousel-btn prev" type="button" aria-label="Previous photo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg></button>
+      <button class="carousel-btn next" type="button" aria-label="Next photo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg></button>
+    </div>
     <h3>bev_view: camera to GPU to Flutter</h3>
     <p>
       A Flutter plugin with a native library that takes a camera all the way to the screen. Frames from libcamera go
@@ -347,6 +383,11 @@
       camera finds the boards it sees, and their known positions give that camera's homography from the ground to
       its image. Where two cameras see the same board, the app also measures how well their seam lines up.
     </p>
+    <figure>
+      <video src="public/videos/lens-calibration-part2.mp4" controls muted playsinline preload="metadata"
+             style="max-height: 640px; width: auto; max-width: 100%; margin: 0 auto;"></video>
+      <figcaption>Lens calibration of a fisheye camera (4x speed), then the flattened camera view at normal speed from 1:30</figcaption>
+    </figure>
 
     <h2>Code</h2>
     <h3>Application repository</h3>
@@ -385,6 +426,8 @@
     <ul>
       <li><strong>Next step: the AI.</strong> Run the existing camera AI model inside the app, on the same zero-copy
         frames, and show its detections in the views. </li>
+      <li>Improve the blending so the bird's-eye view reads as one seamless scene, with no visible joins where
+        two cameras overlap</li>
       <li>Move the app's history to <code>apps/flutter-surround-view</code> on AGL Gerrit and point the recipe at it</li>
     </ul>
 
@@ -464,5 +507,13 @@
   </footer>
 
 </div>
+<script>
+  document.querySelectorAll('.carousel').forEach(function (c) {
+    var track = c.querySelector('.carousel-track');
+    var step = function () { return track.clientWidth * 0.8; };
+    c.querySelector('.prev').addEventListener('click', function () { track.scrollBy({ left: -step() }); });
+    c.querySelector('.next').addEventListener('click', function () { track.scrollBy({ left: step() }); });
+  });
+</script>
 </body>
 </html>
