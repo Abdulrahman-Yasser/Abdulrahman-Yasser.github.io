@@ -378,7 +378,8 @@
     </figure>
     <p>
       The lens calibration measures one camera at a time: the user holds a ChArUco board in front of it in many
-      poses, picks a pinhole or fisheye model, and OpenCV fits the lens and its distortion. The surround calibration
+      poses, picks a pinhole or fisheye model, and OpenCV fits the lens and its distortion. <strong>The app captures a picture automatically once it detects
+      18 board corners in a new pose</strong>, so the user only has to move the board around. The surround calibration
       places every camera on the car: boards are laid on the ground around the car following a board layout, each
       camera finds the boards it sees, and their known positions give that camera's homography from the ground to
       its image. Where two cameras see the same board, the app also measures how well their seam lines up.
