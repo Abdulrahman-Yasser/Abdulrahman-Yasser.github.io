@@ -157,7 +157,8 @@
     @media (max-width: 620px) { .prose .carousel-track figure img { height: 220px; } .carousel-btn { top: 110px; } }
     .media-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin: 1.25rem 0 1.5rem; align-items: start; }
     .media-row figure { margin: 0; }
-    @media (max-width: 620px) { .media-row { grid-template-columns: 1fr; } }
+    .media-row.small { grid-template-columns: repeat(2, minmax(0, 220px)); justify-content: center; }
+    @media (max-width: 620px) { .media-row { grid-template-columns: 1fr; } .media-row.small { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 
     .video-note {
       background: var(--surface); border: 0.5px solid var(--border);
@@ -302,6 +303,12 @@
              style="max-height: 640px; width: auto; max-width: 100%; margin: 0 auto;"></video>
       <figcaption>Surround View on a Raspberry Pi 5 running AGL: surround calibration on the street (4x speed), then the bird's-eye view test at normal speed from 1:13</figcaption>
     </figure>
+    <div class="media-row small">
+      <figure><a href="public/images/setup-trunk.jpg" target="_blank"><img src="public/images/setup-trunk.jpg" alt="The test rig in a car's trunk: Raspberry Pi 5, two cameras, a display and a power bank" /></a>
+        <figcaption>The test rig in the car: Pi 5, cameras, display, power bank</figcaption></figure>
+      <figure><a href="public/images/setup-board.jpg" target="_blank"><img src="public/images/setup-board.jpg" alt="A ChArUco board on the ground behind the car" /></a>
+        <figcaption>A ChArUco board behind the car, for the surround calibration</figcaption></figure>
+    </div>
 
     <h2>What I built</h2>
     <figure>
@@ -325,20 +332,6 @@
       It runs on a Raspberry Pi 5 with any camera libcamera supports. I developed it with two IMX219 CSI cameras, and
       USB (UVC) cameras work as well.
     </p>
-    <div class="carousel">
-      <div class="carousel-track">
-        <figure><a href="public/images/setup-trunk.jpg" target="_blank"><img src="public/images/setup-trunk.jpg" alt="The test rig in a car's trunk: Raspberry Pi 5, two cameras, a display and a power bank" /></a>
-          <figcaption>The test rig in the car: Pi 5, cameras, display, power bank</figcaption></figure>
-        <figure><a href="public/images/setup-board.jpg" target="_blank"><img src="public/images/setup-board.jpg" alt="A ChArUco board on the ground behind the car" /></a>
-          <figcaption>A ChArUco board behind the car, for the surround calibration</figcaption></figure>
-        <figure><a href="public/images/setup-pi.jpg" target="_blank"><img src="public/images/setup-pi.jpg" alt="The Raspberry Pi 5 with a camera on its mount" /></a>
-          <figcaption>The Raspberry Pi 5 with a camera on its mount</figcaption></figure>
-        <figure><a href="public/images/setup-fisheye.jpg" target="_blank"><img src="public/images/setup-fisheye.jpg" alt="A fisheye camera module seen from above" /></a>
-          <figcaption>A fisheye camera module</figcaption></figure>
-      </div>
-      <button class="carousel-btn prev" type="button" aria-label="Previous photo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg></button>
-      <button class="carousel-btn next" type="button" aria-label="Next photo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg></button>
-    </div>
     <h3>bev_view: camera to GPU to Flutter</h3>
     <p>
       A Flutter plugin with a native library that takes a camera all the way to the screen. Frames from libcamera go
@@ -389,6 +382,12 @@
              style="max-height: 640px; width: auto; max-width: 100%; margin: 0 auto;"></video>
       <figcaption>Lens calibration of a fisheye camera (4x speed), then the flattened camera view at normal speed from 1:30</figcaption>
     </figure>
+    <div class="media-row small">
+      <figure><a href="public/images/setup-pi.jpg" target="_blank"><img src="public/images/setup-pi.jpg" alt="The Raspberry Pi 5 with a camera on its mount" /></a>
+        <figcaption>The Raspberry Pi 5 with a camera on its mount</figcaption></figure>
+      <figure><a href="public/images/setup-fisheye.jpg" target="_blank"><img src="public/images/setup-fisheye.jpg" alt="A fisheye camera module seen from above" /></a>
+        <figcaption>A fisheye camera module</figcaption></figure>
+    </div>
 
     <h2>Code</h2>
     <h3>Application repository</h3>
@@ -509,13 +508,5 @@
   </footer>
 
 </div>
-<script>
-  document.querySelectorAll('.carousel').forEach(function (c) {
-    var track = c.querySelector('.carousel-track');
-    var step = function () { return track.clientWidth * 0.8; };
-    c.querySelector('.prev').addEventListener('click', function () { track.scrollBy({ left: -step() }); });
-    c.querySelector('.next').addEventListener('click', function () { track.scrollBy({ left: step() }); });
-  });
-</script>
 </body>
 </html>
